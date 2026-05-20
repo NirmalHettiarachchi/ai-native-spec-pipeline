@@ -6,9 +6,9 @@
     <div class="row g-4 align-items-start">
       <div class="col-12 col-xl-7">
         <p class="text-uppercase text-primary fw-bold small mb-2">Local governance dashboard</p>
-        <h1 class="h3 mb-2">Pipeline Runs</h1>
+        <h1 class="h3 mb-2">Runs</h1>
         <p class="text-secondary mb-0">
-          Create a run from a feature spec, then approve and execute each governed stage.
+          Create and track governed development runs.
         </p>
       </div>
       <div class="col-12 col-xl-5">
@@ -56,9 +56,9 @@
     <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
       <div>
         <h2 class="h5 mb-1">Recent Runs</h2>
-        <p class="text-secondary mb-0">
-          Open a run to review approvals, generated changes, gates, and evidence.
-        </p>
+        {% if error and action != "create-run" %}
+          <div class="alert alert-danger py-2 mt-2 mb-0">{{ error }}</div>
+        {% endif %}
       </div>
     </div>
     <div class="table-responsive d-none d-lg-block run-table">

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode
@@ -23,6 +24,7 @@ from pipeline_web.run_state import list_runs, read_allowed_artefact, read_run_de
 
 BASE_DIR = Path(__file__).resolve().parent
 SPEC_SUFFIXES = {".yaml", ".yml", ".json", ".md", ".markdown"}
+APPROVER_PATTERN = re.compile(r"^[A-Za-z0-9 ._'\-]+$")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 app = FastAPI(title="Spec-Driven Pipeline Dashboard")
@@ -282,7 +284,11 @@ def _validate_spec_path(spec_path: str) -> str:
 def _validate_approver(approver: str) -> str:
     stripped = approver.strip()
     if not stripped:
-        return "Enter the approver name."
+        return "Enter approver name."
     if len(stripped) < 2:
-        return "Approver name must be at least 2 characters."
+        return "Use at least 2 characters."
+    if len(stripped) > 60:
+        return "Use 60 characters or fewer."
+    if not APPROVER_PATTERN.fullmatch(stripped):
+        return "Use letters, numbers, spaces, . _ - or apostrophe."
     return ""

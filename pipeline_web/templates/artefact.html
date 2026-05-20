@@ -13,8 +13,11 @@
         <a class="btn btn-outline-primary" href="/runs/{{ run_id }}">Back to run</a>
       </div>
     </div>
-    <pre class="artefact overflow-auto mb-0">{{ content }}</pre>
+    {% if error %}
+      <div class="alert alert-danger mb-0">{{ error }}</div>
+    {% else %}
+      <pre class="artefact overflow-auto mb-0">{{ content }}</pre>
+    {% endif %}
   </div>
 </section>
 {% endblock %}
-

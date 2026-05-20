@@ -102,9 +102,7 @@
   <div class="card-body">
     <div class="mb-3">
       <h2 class="h5 mb-1">Next Actions</h2>
-      <p class="text-secondary mb-0">
-        Follow these cards in order. Approval steps are human governance checkpoints.
-      </p>
+      <p class="text-secondary mb-0">Complete each available step in order.</p>
     </div>
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 action-grid">
       <div class="col">
@@ -128,6 +126,8 @@
                 placeholder="Your name"
                 required
                 minlength="2"
+                maxlength="60"
+                pattern="[A-Za-z0-9 ._'\-]+"
                 aria-describedby="plan_approver_error"
                 aria-invalid="{{ 'true' if action == 'approve-plan' and field == 'approver' else 'false' }}"
                 {% if state.plan_approved or not state.has_plan %}disabled{% endif %}
@@ -257,6 +257,8 @@
                 placeholder="Your name"
                 required
                 minlength="2"
+                maxlength="60"
+                pattern="[A-Za-z0-9 ._'\-]+"
                 aria-describedby="release_approver_error"
                 aria-invalid="{{ 'true' if action == 'approve-release' and field == 'approver' else 'false' }}"
                 {% if state.release_approved or state.validation_status != "passed" %}disabled{% endif %}

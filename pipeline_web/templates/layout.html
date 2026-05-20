@@ -25,12 +25,6 @@
       </div>
     </nav>
     <main class="container-fluid px-3 px-md-4 py-4">
-      {% if message %}
-        <div class="alert alert-success fw-semibold" role="alert">{{ message }}</div>
-      {% endif %}
-      {% if error %}
-        <div class="alert alert-danger fw-semibold" role="alert">{{ error }}</div>
-      {% endif %}
       {% block content %}{% endblock %}
     </main>
     <div class="loading-overlay" data-loading-overlay aria-live="polite" aria-hidden="true">

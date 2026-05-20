@@ -46,6 +46,8 @@ def test_web_spec_path_validation_renders_inline_errors(
     assert empty_response.status_code == 200
     assert str(empty_response.url).endswith("#create-run")
     assert "Enter a spec path before creating a run." in empty_response.text
+    assert 'role="alert"' not in empty_response.text
+    assert "spec_file_error" in empty_response.text
     assert 'aria-invalid="true"' in empty_response.text
     assert "is-invalid" in empty_response.text
     assert "invalid-feedback" in empty_response.text
@@ -55,6 +57,13 @@ def test_web_spec_path_validation_renders_inline_errors(
     assert "Spec path must end with .yaml, .yml, .json, .md, or .markdown." in (
         extension_response.text
     )
+    assert 'role="alert"' not in extension_response.text
+
+    missing_response = client.post("/runs", data={"spec_file": "missing.yaml"})
+    assert missing_response.status_code == 200
+    assert "spec file does not exist" in missing_response.text
+    assert "spec_file_error" in missing_response.text
+    assert 'role="alert"' not in missing_response.text
 
 
 def test_web_approver_validation_renders_inline_errors(
@@ -69,18 +78,25 @@ def test_web_approver_validation_renders_inline_errors(
     empty_response = client.post(f"/runs/{run_id}/approve-plan", data={"approver": ""})
     assert empty_response.status_code == 200
     assert str(empty_response.url).endswith("#actions")
-    assert "Enter the approver name." in empty_response.text
+    assert "Enter approver name." in empty_response.text
     assert "plan_approver_error" in empty_response.text
     assert "invalid-feedback" in empty_response.text
+    assert 'role="alert"' not in empty_response.text
 
     short_response = client.post(f"/runs/{run_id}/approve-plan", data={"approver": "A"})
-    assert "Approver name must be at least 2 characters." in short_response.text
+    assert "Use at least 2 characters." in short_response.text
+
+    long_response = client.post(f"/runs/{run_id}/approve-plan", data={"approver": "A" * 61})
+    assert "Use 60 characters or fewer." in long_response.text
+
+    invalid_response = client.post(f"/runs/{run_id}/approve-plan", data={"approver": "A@B"})
+    assert "Use letters, numbers, spaces, . _ - or apostrophe." in invalid_response.text
 
     release_response = client.post(
         f"/runs/{run_id}/approve-release",
         data={"approver": "A"},
     )
-    assert "Approver name must be at least 2 characters." in release_response.text
+    assert "Use at least 2 characters." in release_response.text
     assert "release_approver_error" in release_response.text
 
 
@@ -110,9 +126,13 @@ def test_web_pages_include_mobile_and_loading_affordances(
     assert "row-cols-md-2 row-cols-xl-3" in detail.text
     assert "Plan approval is required first." in detail.text
     assert 'data-loading-label="Validating..."' in detail.text
+    assert 'maxlength="60"' in detail.text
+    assert 'pattern="[A-Za-z0-9 ._\'\\-]+"' in detail.text
 
     layout = Path("pipeline_web/templates/layout.html").read_text(encoding="utf-8")
     assert "bootstrap@5.3.3" in layout
+    assert "alert-success" not in layout
+    assert "alert-danger" not in layout
     css = Path("pipeline_web/static/app.css").read_text(encoding="utf-8")
     assert "@media (max-width: 700px)" in css
     assert ".artefact" in css
