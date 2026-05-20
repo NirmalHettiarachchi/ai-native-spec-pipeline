@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from pipeline.audit import initialize_run
+from pipeline.approval import create_approval
 from pipeline.errors import PipelineError
 from pipeline.planner import create_plan, write_plan
 from pipeline.spec_parser import parse_feature_spec
@@ -27,6 +28,12 @@ def build_parser() -> argparse.ArgumentParser:
     plan = subparsers.add_parser("plan", help="Create an implementation plan from a spec.")
     plan.add_argument("spec_file", type=Path)
     plan.set_defaults(func=_cmd_plan)
+
+    approve = subparsers.add_parser("approve", help="Record a human approval checkpoint.")
+    approve.add_argument("run_id")
+    approve.add_argument("--stage", choices=["plan", "release"], required=True)
+    approve.add_argument("--approver", required=True)
+    approve.set_defaults(func=_cmd_approve)
 
     return parser
 
@@ -56,4 +63,11 @@ def _cmd_plan(args: argparse.Namespace) -> int:
     print(f"plan: {run_dir / 'plan.md'}")
     print("approve before implementation:")
     print(f"  python -m pipeline approve {run_id} --stage plan --approver <name>")
+    return 0
+
+
+def _cmd_approve(args: argparse.Namespace) -> int:
+    approval = create_approval(args.run_id, args.stage, args.approver)
+    print(f"approved {approval.stage} for run: {approval.run_id}")
+    print(f"approval hash: {approval.signature}")
     return 0
