@@ -122,7 +122,6 @@ class OpenAIResponsesProvider:
                     "Do not include files outside the approved plan."
                 ),
                 "input": prompt,
-                "reasoning": {"effort": self.reasoning_effort},
                 "text": {
                     "format": {
                         "type": "json_schema",
@@ -133,6 +132,8 @@ class OpenAIResponsesProvider:
                 },
                 "store": False,
             }
+            if _supports_reasoning_effort(self.model):
+                request_payload["reasoning"] = {"effort": self.reasoning_effort}
             create_response = cast(Any, self.client.responses.create)
             response = create_response(**request_payload)
         except Exception as exc:  # noqa: BLE001 - convert SDK failures to pipeline errors
@@ -148,7 +149,9 @@ class OpenAIResponsesProvider:
             "request": {
                 "endpoint": "responses.create",
                 "model": self.model,
-                "reasoning_effort": self.reasoning_effort,
+                "reasoning_effort": (
+                    self.reasoning_effort if _supports_reasoning_effort(self.model) else None
+                ),
                 "text_format": "json_schema",
                 "store": False,
             },
@@ -195,6 +198,11 @@ def _generated_change_set_schema() -> dict[str, Any]:
             },
         },
     }
+
+
+def _supports_reasoning_effort(model: str) -> bool:
+    normalized = model.lower()
+    return normalized.startswith(("gpt-5", "o1", "o3", "o4"))
 
 
 def _response_output_text(response: Any) -> str:

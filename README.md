@@ -94,9 +94,10 @@ uses the deterministic local template provider. Explicit modes are also supporte
 ```powershell
 $env:PIPELINE_AI_PROVIDER = "openai"
 $env:OPENAI_API_KEY = "<key>"
-$env:OPENAI_MODEL = "gpt-5.5"
-$env:OPENAI_REASONING_EFFORT = "medium"
+$env:OPENAI_MODEL = "gpt-4o-mini"
 ```
+
+`OPENAI_REASONING_EFFORT` is only sent when the configured model supports reasoning controls.
 
 ```powershell
 $env:PIPELINE_AI_PROVIDER = "local"

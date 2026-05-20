@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from pipeline.errors import PipelineError
 
 DEFAULT_AI_PROVIDER_MODE = "auto"
-DEFAULT_OPENAI_MODEL = "gpt-5.5"
+DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 DEFAULT_OPENAI_REASONING_EFFORT = "medium"
 DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 SUPPORTED_AI_PROVIDER_MODES = {"auto", "local", "openai"}

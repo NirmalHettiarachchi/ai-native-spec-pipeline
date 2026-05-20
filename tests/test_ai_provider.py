@@ -51,7 +51,7 @@ def test_openai_responses_provider_uses_structured_outputs(
     monkeypatch.setattr(openai, "OpenAI", FakeOpenAI)
     monkeypatch.setenv("PIPELINE_AI_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-secret")
-    monkeypatch.setenv("OPENAI_MODEL", "gpt-test")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-4o-mini")
     monkeypatch.setenv("OPENAI_REASONING_EFFORT", "medium")
 
     spec = parse_feature_spec(Path("specs/examples/discount_calculator.yaml"))
@@ -63,19 +63,20 @@ def test_openai_responses_provider_uses_structured_outputs(
     assert constructed == [{"api_key": "sk-test-secret", "base_url": "https://api.openai.com/v1"}]
     assert calls
     request = calls[0]
-    assert request["model"] == "gpt-test"
-    assert request["reasoning"] == {"effort": "medium"}
+    assert request["model"] == "gpt-4o-mini"
+    assert "reasoning" not in request
     assert request["store"] is False
     assert request["text"]["format"]["type"] == "json_schema"  # type: ignore[index]
     assert change_set.provider == "openai-responses"
-    assert change_set.model == "gpt-test"
+    assert change_set.model == "gpt-4o-mini"
     assert provider.last_interaction_metadata["response"]["id"] == "resp_test"
+    assert provider.last_interaction_metadata["request"]["reasoning_effort"] is None
     assert "sk-test-secret" not in json.dumps(provider.last_interaction_metadata)
 
 
 def test_openai_provider_requires_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PIPELINE_AI_PROVIDER", "openai")
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "")
 
     with pytest.raises(PipelineError, match="OPENAI_API_KEY is required"):
         get_ai_provider()

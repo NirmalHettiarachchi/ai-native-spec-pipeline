@@ -15,7 +15,7 @@ def test_runtime_config_loads_env_file_without_exposing_secret(
             [
                 "PIPELINE_AI_PROVIDER=auto",
                 "OPENAI_API_KEY=sk-test-secret",
-                "OPENAI_MODEL=gpt-5.5",
+                "OPENAI_MODEL=gpt-4o-mini",
                 "OPENAI_REASONING_EFFORT=high",
                 "PIPELINE_AUDIT_ROOT=tmp-audit",
                 "PIPELINE_SPEC_ROOT=tmp-specs",
@@ -60,7 +60,7 @@ def test_runtime_config_loads_env_file_without_exposing_secret(
 
 def test_runtime_config_auto_falls_back_to_local_without_key(monkeypatch) -> None:
     monkeypatch.delenv("PIPELINE_AI_PROVIDER", raising=False)
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "")
 
     config = get_runtime_config()
 
