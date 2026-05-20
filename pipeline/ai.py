@@ -150,7 +150,7 @@ def _discount_calculator_files(spec: FeatureSpec, plan: PlanArtifact) -> list[Ge
 
     module = f'''"""Generated implementation for {spec.display_name}."""
 
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 Number = int | float | Decimal
 
@@ -190,9 +190,9 @@ from demo_app.{plan.target_module} import DiscountValidationError, calculate_dis
 __all__ = ["DiscountValidationError", "calculate_discounted_price"]
 '''
     unit_tests = f'''import pytest
+from demo_app.{plan.target_module} import DiscountValidationError, calculate_discounted_price
 
 import demo_app
-from demo_app.{plan.target_module} import DiscountValidationError, calculate_discounted_price
 
 
 def test_ac_001_calculates_discounted_price() -> None:
@@ -221,7 +221,6 @@ def test_integration_package_export() -> None:
     assert demo_app.calculate_discounted_price(40, 25) == 30.0
 '''
     acceptance_tests = f'''import pytest
-
 from demo_app.{plan.target_module} import ACCEPTANCE_CRITERIA, calculate_discounted_price
 
 ACCEPTANCE_COVERAGE = {coverage_literal}
