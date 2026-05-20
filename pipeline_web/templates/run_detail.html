@@ -54,7 +54,7 @@
   </div>
 </section>
 
-<section class="card shadow-sm border-0 mb-4">
+<section class="card shadow-sm border-0 mb-4" id="workflow">
   <div class="card-body">
     <h2 class="h5 mb-3">Workflow</h2>
     <ol class="list-unstyled row row-cols-1 row-cols-sm-2 row-cols-xl-6 g-2 mb-0 workflow-stepper">
@@ -98,7 +98,7 @@
   </div>
 </section>
 
-<section class="card shadow-sm border-0 mb-4">
+<section class="card shadow-sm border-0 mb-4" id="actions">
   <div class="card-body">
     <div class="mb-3">
       <h2 class="h5 mb-1">Next Actions</h2>
@@ -135,6 +135,9 @@
               {% if error and action == "approve-plan" %}
                 <div id="plan_approver_error" class="invalid-feedback d-block">{{ error }}</div>
               {% endif %}
+              {% if message and action == "approve-plan" %}
+                <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
+              {% endif %}
               <p class="form-text mb-3">
                 {% if state.plan_approved %}
                   Plan approval is complete.
@@ -169,6 +172,9 @@
             </div>
             {% if error and action == "implement" %}
               <div class="invalid-feedback d-block mb-2">{{ error }}</div>
+            {% endif %}
+            {% if message and action == "implement" %}
+              <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
             {% endif %}
             <p class="form-text mb-3">
               {% if state.has_changes %}
@@ -205,6 +211,9 @@
             </div>
             {% if error and action == "validate" %}
               <div class="invalid-feedback d-block mb-2">{{ error }}</div>
+            {% endif %}
+            {% if message and action == "validate" %}
+              <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
             {% endif %}
             <p class="form-text mb-3">
               {% if state.validation_status == "passed" %}
@@ -255,6 +264,9 @@
               {% if error and action == "approve-release" %}
                 <div id="release_approver_error" class="invalid-feedback d-block">{{ error }}</div>
               {% endif %}
+              {% if message and action == "approve-release" %}
+                <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
+              {% endif %}
               <p class="form-text mb-3">
                 {% if state.release_approved %}
                   Release approval is complete.
@@ -289,6 +301,9 @@
             </div>
             {% if error and action == "evidence" %}
               <div class="invalid-feedback d-block mb-2">{{ error }}</div>
+            {% endif %}
+            {% if message and action == "evidence" %}
+              <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
             {% endif %}
             <p class="form-text mb-3">
               {% if state.has_evidence %}
@@ -336,7 +351,7 @@
       </div>
     </section>
   </div>
-  <div class="col-12 col-xl-5">
+  <div class="col-12 col-xl-5" id="artefacts">
     <section class="card shadow-sm h-100 border-0">
       <div class="card-body">
         <h2 class="h5 mb-2">Artefacts</h2>
@@ -357,7 +372,7 @@
   </div>
 </div>
 
-<section class="card shadow-sm border-0 mb-4">
+<section class="card shadow-sm border-0 mb-4" id="generated-changes">
   <div class="card-body">
     <h2 class="h5 mb-3">Generated Changes</h2>
     <div class="table-responsive">
@@ -387,7 +402,7 @@
   </div>
 </section>
 
-<section class="card shadow-sm border-0 mb-4">
+<section class="card shadow-sm border-0 mb-4" id="validation">
   <div class="card-body">
     <h2 class="h5 mb-3">Validation Gates</h2>
     <div class="table-responsive">
@@ -443,4 +458,3 @@
   </div>
 </section>
 {% endblock %}
-

@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<section class="card shadow-sm mb-4 border-0 border-top border-4 border-primary">
+<section id="create-run" class="card shadow-sm mb-4 border-0 border-top border-4 border-primary">
   <div class="card-body">
     <div class="row g-4 align-items-start">
       <div class="col-12 col-xl-7">
@@ -22,14 +22,9 @@
         </ol>
       </div>
     </div>
-    <form
-      class="row g-3 align-items-end mt-3"
-      method="post"
-      action="/runs"
-      data-loading-label="Creating run..."
-    >
-      <div class="col-12 col-lg">
-        <label for="spec_file" class="form-label fw-semibold">Feature spec path</label>
+    <form method="post" action="/runs" data-loading-label="Creating run..." class="mt-3">
+      <label for="spec_file" class="form-label fw-semibold">Feature spec path</label>
+      <div class="create-run-control">
         <input
           class="form-control {{ 'is-invalid' if field == 'spec_file' else '' }}"
           id="spec_file"
@@ -40,6 +35,11 @@
           aria-describedby="spec_file_help spec_file_error"
           aria-invalid="{{ 'true' if field == 'spec_file' else 'false' }}"
         >
+        <button class="btn btn-primary" type="submit" data-loading-label="Creating run...">
+          Create Run
+        </button>
+      </div>
+      <div class="create-run-help">
         <div id="spec_file_help" class="form-text">
           Use a Markdown, YAML, or JSON spec file already available in this workspace.
         </div>
@@ -47,16 +47,11 @@
           <div id="spec_file_error" class="invalid-feedback d-block">{{ error }}</div>
         {% endif %}
       </div>
-      <div class="col-12 col-lg-auto">
-        <button class="btn btn-primary w-100" type="submit" data-loading-label="Creating run...">
-          Create Run
-        </button>
-      </div>
     </form>
   </div>
 </section>
 
-<section class="card shadow-sm border-0">
+<section id="runs" class="card shadow-sm border-0">
   <div class="card-body">
     <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
       <div>
@@ -143,4 +138,3 @@
   </div>
 </section>
 {% endblock %}
-

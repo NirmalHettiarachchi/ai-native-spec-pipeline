@@ -57,7 +57,13 @@ async def create_run(request: Request) -> RedirectResponse:
     spec_path_text = form.get("spec_file", "").strip()
     validation_error = _validate_spec_path(spec_path_text)
     if validation_error:
-        return _redirect("/", error=validation_error, field="spec_file", action="create-run")
+        return _redirect(
+            "/",
+            error=validation_error,
+            field="spec_file",
+            action="create-run",
+            fragment="create-run",
+        )
 
     spec_path = Path(spec_path_text)
     try:
@@ -66,7 +72,13 @@ async def create_run(request: Request) -> RedirectResponse:
         plan = create_plan(spec, run_id, spec_hash)
         write_plan(run_dir, plan, spec)
     except PipelineError as exc:
-        return _redirect("/", error=str(exc), field="spec_file", action="create-run")
+        return _redirect(
+            "/",
+            error=str(exc),
+            field="spec_file",
+            action="create-run",
+            fragment="create-run",
+        )
     return _redirect(f"/runs/{run_id}", message="Run created and plan generated.")
 
 
@@ -112,6 +124,7 @@ async def approve_plan(request: Request, run_id: str) -> RedirectResponse:
             error=approver_error,
             field="approver",
             action="approve-plan",
+            fragment="actions",
         )
     return _run_action(
         run_id,
@@ -151,6 +164,7 @@ async def approve_release(request: Request, run_id: str) -> RedirectResponse:
             error=approver_error,
             field="approver",
             action="approve-release",
+            fragment="actions",
         )
     return _run_action(
         run_id,
@@ -220,8 +234,18 @@ def _run_action(
     try:
         action()
     except PipelineError as exc:
-        return _redirect(f"/runs/{run_id}", error=str(exc), action=action_name)
-    return _redirect(f"/runs/{run_id}", message=success, action=action_name)
+        return _redirect(
+            f"/runs/{run_id}",
+            error=str(exc),
+            action=action_name,
+            fragment="actions",
+        )
+    return _redirect(
+        f"/runs/{run_id}",
+        message=success,
+        action=action_name,
+        fragment="actions",
+    )
 
 
 def _redirect(
@@ -231,6 +255,7 @@ def _redirect(
     error: str = "",
     field: str = "",
     action: str = "",
+    fragment: str = "",
 ) -> RedirectResponse:
     params: dict[str, str] = {}
     if message:
@@ -242,7 +267,8 @@ def _redirect(
     if action:
         params["action"] = action
     suffix = f"?{urlencode(params)}" if params else ""
-    return RedirectResponse(f"{path}{suffix}", status_code=303)
+    anchor = f"#{fragment}" if fragment else ""
+    return RedirectResponse(f"{path}{suffix}{anchor}", status_code=303)
 
 
 def _validate_spec_path(spec_path: str) -> str:

@@ -16,6 +16,30 @@ body {
   min-width: 0;
 }
 
+section[id],
+div[id] {
+  scroll-margin-top: 1rem;
+}
+
+.create-run-control {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.create-run-control .form-control {
+  min-width: 0;
+}
+
+.create-run-control .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.create-run-help {
+  max-width: 48rem;
+}
+
 .mini-steps span {
   display: block;
   padding: 0.55rem 0.75rem;
@@ -154,8 +178,15 @@ code {
     padding: 1rem;
   }
 
+  .create-run-control {
+    flex-direction: column;
+  }
+
+  .create-run-control .btn {
+    width: 100%;
+  }
+
   .artefact {
     min-height: 20rem;
   }
 }
-

@@ -32,6 +32,7 @@ def test_web_create_run_and_blocked_actions(
     blocked = client.post(f"/runs/{run_id}/approve-release", data={"approver": "Reviewer"})
     assert blocked.status_code == 303
     assert "cannot+approve+release" in blocked.headers["location"]
+    assert blocked.headers["location"].endswith("#actions")
 
 
 def test_web_spec_path_validation_renders_inline_errors(
@@ -43,6 +44,7 @@ def test_web_spec_path_validation_renders_inline_errors(
 
     empty_response = client.post("/runs", data={"spec_file": ""})
     assert empty_response.status_code == 200
+    assert str(empty_response.url).endswith("#create-run")
     assert "Enter a spec path before creating a run." in empty_response.text
     assert 'aria-invalid="true"' in empty_response.text
     assert "is-invalid" in empty_response.text
@@ -66,6 +68,7 @@ def test_web_approver_validation_renders_inline_errors(
 
     empty_response = client.post(f"/runs/{run_id}/approve-plan", data={"approver": ""})
     assert empty_response.status_code == 200
+    assert str(empty_response.url).endswith("#actions")
     assert "Enter the approver name." in empty_response.text
     assert "plan_approver_error" in empty_response.text
     assert "invalid-feedback" in empty_response.text
@@ -95,8 +98,13 @@ def test_web_pages_include_mobile_and_loading_affordances(
     assert "loading-overlay" in runs_page.text
     assert "spinner-border" in runs_page.text
     assert 'data-loading-label="Creating run..."' in runs_page.text
+    assert 'id="create-run"' in runs_page.text
+    assert "create-run-control" in runs_page.text
 
     detail = client.get(f"/runs/{run_id}")
+    assert 'id="actions"' in detail.text
+    assert 'id="validation"' in detail.text
+    assert 'id="artefacts"' in detail.text
     assert "workflow-stepper" in detail.text
     assert "action-card" in detail.text
     assert "row-cols-md-2 row-cols-xl-3" in detail.text
@@ -109,7 +117,14 @@ def test_web_pages_include_mobile_and_loading_affordances(
     assert "@media (max-width: 700px)" in css
     assert ".artefact" in css
     assert ".log-output" in css
+    assert ".create-run-control" in css
     assert "repeat(5" not in css
+
+    js = Path("pipeline_web/static/app.js").read_text(encoding="utf-8")
+    assert "function setLoading" in js
+    assert "pageshow" in js
+    assert "visibilitychange" in js
+    assert "setTimeout" in js
 
 
 def test_web_routes_can_execute_governed_flow(
@@ -125,6 +140,10 @@ def test_web_routes_can_execute_governed_flow(
         data={"approver": "Reviewer"},
     )
     assert approve_response.status_code == 303
+    assert approve_response.headers["location"].endswith("#actions")
+
+    approval_detail = client.get(approve_response.headers["location"])
+    assert "Plan approval recorded." in approval_detail.text
 
     def fake_implement(run_id: str) -> None:
         write_json(
