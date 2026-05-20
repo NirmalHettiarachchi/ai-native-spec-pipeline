@@ -45,7 +45,7 @@ def test_web_spec_path_validation_renders_inline_errors(
     empty_response = client.post("/runs", data={"spec_file": ""})
     assert empty_response.status_code == 200
     assert str(empty_response.url).endswith("#create-run")
-    assert "Enter a spec path before creating a run." in empty_response.text
+    assert "Choose a spec before creating a run." in empty_response.text
     assert 'role="alert"' not in empty_response.text
     assert "spec_file_error" in empty_response.text
     assert 'aria-invalid="true"' in empty_response.text
@@ -54,9 +54,7 @@ def test_web_spec_path_validation_renders_inline_errors(
 
     extension_response = client.post("/runs", data={"spec_file": "feature.txt"})
     assert extension_response.status_code == 200
-    assert "Spec path must end with .yaml, .yml, .json, .md, or .markdown." in (
-        extension_response.text
-    )
+    assert "Spec must be .yaml, .yml, .json, .md, or .markdown." in extension_response.text
     assert 'role="alert"' not in extension_response.text
 
     missing_response = client.post("/runs", data={"spec_file": "missing.yaml"})
@@ -64,6 +62,47 @@ def test_web_spec_path_validation_renders_inline_errors(
     assert "spec file does not exist" in missing_response.text
     assert "spec_file_error" in missing_response.text
     assert 'role="alert"' not in missing_response.text
+
+
+def test_web_create_run_from_uploaded_spec(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    spec_root = tmp_path / "specs"
+    monkeypatch.setenv("PIPELINE_AUDIT_ROOT", str(tmp_path / "audit"))
+    monkeypatch.setenv("PIPELINE_SPEC_ROOT", str(spec_root))
+    client = TestClient(app, follow_redirects=False)
+    content = Path("specs/examples/discount_calculator.yaml").read_bytes()
+
+    response = client.post(
+        "/runs",
+        data={"spec_file": ""},
+        files={"spec_upload": ("uploaded.yaml", content, "application/x-yaml")},
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/runs/")
+    assert list((spec_root / "uploads").glob("*.yaml"))
+
+
+def test_web_bad_upload_renders_inline_only(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("PIPELINE_AUDIT_ROOT", str(tmp_path / "audit"))
+    monkeypatch.setenv("PIPELINE_SPEC_ROOT", str(tmp_path / "specs"))
+    client = TestClient(app)
+
+    response = client.post(
+        "/runs",
+        data={"spec_file": ""},
+        files={"spec_upload": ("bad.txt", b"not a spec", "text/plain")},
+    )
+
+    assert response.status_code == 200
+    assert "Uploaded spec must be .yaml, .yml, .json, .md, or .markdown." in response.text
+    assert "spec_file_error" in response.text
+    assert 'role="alert"' not in response.text
 
 
 def test_web_approver_validation_renders_inline_errors(
@@ -116,6 +155,10 @@ def test_web_pages_include_mobile_and_loading_affordances(
     assert 'data-loading-label="Creating run..."' in runs_page.text
     assert 'id="create-run"' in runs_page.text
     assert "create-run-control" in runs_page.text
+    assert 'enctype="multipart/form-data"' in runs_page.text
+    assert 'id="spec_upload"' in runs_page.text
+    assert "<select" in runs_page.text
+    assert "specs/examples/discount_calculator.yaml" in runs_page.text
 
     detail = client.get(f"/runs/{run_id}")
     assert 'id="actions"' in detail.text
@@ -123,6 +166,9 @@ def test_web_pages_include_mobile_and_loading_affordances(
     assert 'id="artefacts"' in detail.text
     assert "workflow-stepper" in detail.text
     assert "action-card" in detail.text
+    assert 'id="coverage"' in detail.text
+    assert "Spec Intake" in detail.text
+    assert "Human Approval Workflow" in detail.text
     assert "row-cols-md-2 row-cols-xl-3" in detail.text
     assert "Plan approval is required first." in detail.text
     assert 'data-loading-label="Validating..."' in detail.text
@@ -217,3 +263,20 @@ def test_web_routes_can_execute_governed_flow(
 
     detail = client.get(f"/runs/{run_id}")
     assert "Evidence complete" in detail.text
+
+
+def test_web_run_list_renders_pagination(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("PIPELINE_AUDIT_ROOT", str(tmp_path))
+    client = TestClient(app, follow_redirects=False)
+
+    for _ in range(11):
+        _create_run(client)
+
+    response = client.get("/")
+
+    assert "Showing 1-10 of 11" in response.text
+    assert 'aria-label="Run pages"' in response.text
+    assert "page=2" in response.text

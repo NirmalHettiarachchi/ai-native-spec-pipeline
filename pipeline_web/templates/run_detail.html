@@ -54,6 +54,28 @@
   </div>
 </section>
 
+<section class="card shadow-sm border-0 mb-4" id="coverage">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Coverage</h2>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 coverage-grid">
+      {% for item in detail.coverage %}
+        {% set badge_class = 'text-bg-success' if item.status == 'complete' else 'text-bg-warning' if item.status == 'partial' else 'text-bg-danger' if item.status == 'attention' else 'text-bg-light text-secondary' %}
+        <div class="col">
+          <article class="card h-100 border coverage-card">
+            <div class="card-body">
+              <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
+                <h3 class="h6 mb-0">{{ item.label }}</h3>
+                <span class="badge rounded-pill {{ badge_class }}">{{ item.status }}</span>
+              </div>
+              <p class="small text-secondary mb-0">{{ item.detail }}</p>
+            </div>
+          </article>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
 <section class="card shadow-sm border-0 mb-4" id="workflow">
   <div class="card-body">
     <h2 class="h5 mb-3">Workflow</h2>

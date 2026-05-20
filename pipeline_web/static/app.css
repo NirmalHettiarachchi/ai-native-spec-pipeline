@@ -27,7 +27,8 @@ div[id] {
   align-items: stretch;
 }
 
-.create-run-control .form-control {
+.create-run-control .form-control,
+.create-run-control .form-select {
   min-width: 0;
 }
 
@@ -106,6 +107,10 @@ div[id] {
 .action-card.complete {
   border-color: rgba(var(--bs-success-rgb), 0.35);
   background: rgba(var(--bs-success-rgb), 0.04);
+}
+
+.coverage-card {
+  background: var(--bs-light);
 }
 
 .action-index {

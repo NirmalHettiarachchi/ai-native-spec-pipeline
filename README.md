@@ -22,13 +22,16 @@ Open `http://127.0.0.1:8000`. The UI reads and writes the same audit artefacts a
 
 The dashboard supports:
 
-- creating a run from a spec path
+- creating a run from a known spec, or uploading `.yaml`, `.yml`, `.json`, `.md`, or `.markdown`
+- paging recent runs with `?page=<n>&page_size=<n>`; the default page size is 10
 - reviewing the normalized spec, plan, AI interactions, generated change manifest, validation gates, approvals, and evidence
 - approving the plan before implementation
 - generating implementation and tests
 - running validation gates
 - approving release only after validation passes
 - generating deployment evidence after release approval
+
+Uploaded specs are saved under `specs/uploads/` and ignored by Git except for the directory marker.
 
 ## Input Contract
 
@@ -112,10 +115,23 @@ Each run writes:
 
 Generated audit runs live under `audit/runs/<run-id>/` and are ignored by Git to keep local executions reproducible without creating source-control noise.
 
+## Assessment Coverage
+
+| Requirement | Implementation | UI Flow |
+| --- | --- | --- |
+| Spec Intake | `pipeline/spec_parser.py` normalizes Markdown, YAML, and JSON specs | Create Run spec selector/upload |
+| Planning Layer | `pipeline/planner.py` writes `plan.json` and `plan.md` | Run detail workflow and artefacts |
+| AI-assisted Implementation | `pipeline/ai.py` and `pipeline/generator.py` produce bounded changes | Generate Implementation action |
+| Automated Test Generation | Generated test files map to acceptance criterion IDs | Generated Changes and Coverage panels |
+| Quality Gates | `pipeline/gates.py` runs lint, type, test, security, and policy checks | Run Validation action and Validation panel |
+| Human Approval Workflow | `pipeline/approval.py` records hash-bound plan/release approvals | Approve Plan and Approve Release actions |
+| Auditability | `pipeline/audit.py` captures versioned run artefacts | Artefacts and Coverage panels |
+
 ## Verification
 
 ```powershell
 python -m ruff check .
-python -m mypy pipeline demo_app/src
+python -m mypy pipeline pipeline_web demo_app/src
 python -m pytest
+python -m bandit -q -r pipeline pipeline_web demo_app/src -x tests,demo_app/tests -ll
 ```

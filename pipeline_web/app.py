@@ -5,12 +5,14 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from pathlib import Path
-from urllib.parse import parse_qs, urlencode
+from typing import Any
+from urllib.parse import urlencode
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.datastructures import FormData
 
 from pipeline.approval import create_approval
 from pipeline.audit import initialize_run
@@ -20,10 +22,15 @@ from pipeline.gates import validate_run
 from pipeline.generator import implement_run
 from pipeline.planner import create_plan, write_plan
 from pipeline.spec_parser import parse_feature_spec
-from pipeline_web.run_state import list_runs, read_allowed_artefact, read_run_detail
+from pipeline_web.run_state import list_runs_page, read_allowed_artefact, read_run_detail
+from pipeline_web.spec_catalog import (
+    DEFAULT_SPEC,
+    list_spec_files,
+    resolve_spec_path,
+    save_uploaded_spec,
+)
 
 BASE_DIR = Path(__file__).resolve().parent
-SPEC_SUFFIXES = {".yaml", ".yml", ".json", ".md", ".markdown"}
 APPROVER_PATTERN = re.compile(r"^[A-Za-z0-9 ._'\-]+$")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
@@ -34,6 +41,8 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 @app.get("/", response_class=HTMLResponse)
 async def runs(
     request: Request,
+    page: str = "1",
+    page_size: str = "10",
     message: str = "",
     error: str = "",
     field: str = "",
@@ -43,32 +52,22 @@ async def runs(
         request,
         "runs.html",
         {
-            "runs": list_runs(),
+            "run_page": list_runs_page(page, page_size),
+            "spec_options": list_spec_files(),
             "message": message,
             "error": error,
             "field": field,
             "action": action,
-            "default_spec": "specs/examples/discount_calculator.yaml",
+            "default_spec": DEFAULT_SPEC,
         },
     )
 
 
 @app.post("/runs")
 async def create_run(request: Request) -> RedirectResponse:
-    form = await _read_form(request)
-    spec_path_text = form.get("spec_file", "").strip()
-    validation_error = _validate_spec_path(spec_path_text)
-    if validation_error:
-        return _redirect(
-            "/",
-            error=validation_error,
-            field="spec_file",
-            action="create-run",
-            fragment="create-run",
-        )
-
-    spec_path = Path(spec_path_text)
+    form = await request.form()
     try:
+        spec_path = await _resolve_submitted_spec(form)
         spec = parse_feature_spec(spec_path)
         run_id, run_dir, spec_hash = initialize_run(spec, spec_path)
         plan = create_plan(spec, run_id, spec_hash)
@@ -100,12 +99,13 @@ async def run_detail(
             request,
             "runs.html",
             {
-                "runs": list_runs(),
+                "run_page": list_runs_page(),
+                "spec_options": list_spec_files(),
                 "message": "",
                 "error": str(exc),
                 "field": "",
                 "action": "",
-                "default_spec": "specs/examples/discount_calculator.yaml",
+                "default_spec": DEFAULT_SPEC,
             },
             status_code=404,
         )
@@ -223,8 +223,23 @@ async def artefact(
 
 
 async def _read_form(request: Request) -> dict[str, str]:
-    body = (await request.body()).decode("utf-8")
-    return {key: values[-1] for key, values in parse_qs(body, keep_blank_values=True).items()}
+    form = await request.form()
+    values: dict[str, str] = {}
+    for key, value in form.multi_items():
+        if hasattr(value, "filename"):
+            continue
+        values[key] = str(value)
+    return values
+
+
+async def _resolve_submitted_spec(form: FormData) -> Path:
+    selected = str(form.get("spec_file") or "").strip()
+    upload: Any = form.get("spec_upload")
+    upload_name = str(getattr(upload, "filename", "") or "").strip()
+    if upload_name:
+        content = await upload.read()
+        return save_uploaded_spec(upload_name, content)
+    return resolve_spec_path(selected)
 
 
 def _run_action(
@@ -271,14 +286,6 @@ def _redirect(
     suffix = f"?{urlencode(params)}" if params else ""
     anchor = f"#{fragment}" if fragment else ""
     return RedirectResponse(f"{path}{suffix}{anchor}", status_code=303)
-
-
-def _validate_spec_path(spec_path: str) -> str:
-    if not spec_path:
-        return "Enter a spec path before creating a run."
-    if Path(spec_path).suffix.lower() not in SPEC_SUFFIXES:
-        return "Spec path must end with .yaml, .yml, .json, .md, or .markdown."
-    return ""
 
 
 def _validate_approver(approver: str) -> str:

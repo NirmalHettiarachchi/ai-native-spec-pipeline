@@ -44,6 +44,41 @@ class RunState:
     has_evidence: bool
 
 
+@dataclass(frozen=True)
+class RunPage:
+    items: list[RunState]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    page_numbers: tuple[int, ...]
+
+    @property
+    def has_previous(self) -> bool:
+        return self.page > 1
+
+    @property
+    def has_next(self) -> bool:
+        return self.page < self.total_pages
+
+    @property
+    def start_index(self) -> int:
+        if self.total == 0:
+            return 0
+        return (self.page - 1) * self.page_size + 1
+
+    @property
+    def end_index(self) -> int:
+        return min(self.page * self.page_size, self.total)
+
+
+@dataclass(frozen=True)
+class CoverageItem:
+    label: str
+    status: str
+    detail: str
+
+
 def list_runs(audit_root: Path | None = None) -> list[RunState]:
     root = audit_root or get_audit_root()
     if not root.exists():
@@ -54,6 +89,28 @@ def list_runs(audit_root: Path | None = None) -> list[RunState]:
         if path.is_dir() and not path.name.startswith(".")
     ]
     return sorted(runs, key=lambda run: run.created_at or run.run_id, reverse=True)
+
+
+def list_runs_page(
+    page: int | str = 1,
+    page_size: int | str = 10,
+    audit_root: Path | None = None,
+) -> RunPage:
+    runs = list_runs(audit_root)
+    total = len(runs)
+    normalized_size = _clamp_int(page_size, default=10, minimum=1, maximum=50)
+    total_pages = max(1, (total + normalized_size - 1) // normalized_size)
+    normalized_page = _clamp_int(page, default=1, minimum=1, maximum=total_pages)
+    start = (normalized_page - 1) * normalized_size
+    end = start + normalized_size
+    return RunPage(
+        items=runs[start:end],
+        total=total,
+        page=normalized_page,
+        page_size=normalized_size,
+        total_pages=total_pages,
+        page_numbers=_page_window(normalized_page, total_pages),
+    )
 
 
 def get_run_state(run_id: str, audit_root: Path | None = None) -> RunState:
@@ -115,6 +172,7 @@ def read_run_detail(run_id: str, audit_root: Path | None = None) -> dict[str, An
         "release_approval": _read_optional_json(run_dir / "approval.release.json"),
         "ai_interactions": _read_jsonl(run_dir / "ai_interactions.jsonl"),
         "artefacts": sorted(name for name in ALLOWED_ARTEFACTS if (run_dir / name).exists()),
+        "coverage": build_coverage(run_dir, state),
     }
 
 
@@ -159,6 +217,103 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return interactions
 
 
+def build_coverage(run_dir: Path, state: RunState) -> tuple[CoverageItem, ...]:
+    manifest = _read_optional_json(run_dir / "change_manifest.json")
+    validation = _read_optional_json(run_dir / "validation_results.json")
+    has_spec = (run_dir / "spec.normalized.json").exists()
+    artefact_count = sum(1 for name in ALLOWED_ARTEFACTS if (run_dir / name).exists())
+    manifest_files = manifest.get("files", []) if isinstance(manifest.get("files"), list) else []
+    generated_tests = [
+        file
+        for file in manifest_files
+        if isinstance(file, dict) and str(file.get("path", "")).startswith("demo_app/tests/")
+    ]
+    mapped_tests = [
+        file
+        for file in generated_tests
+        if isinstance(file.get("acceptance_criteria"), list) and file["acceptance_criteria"]
+    ]
+    gate_status = validation.get("overall_status", "not run") if validation else "not run"
+
+    return (
+        CoverageItem(
+            "Spec Intake",
+            "complete" if has_spec else "pending",
+            "Normalized spec captured" if has_spec else "Waiting for a valid spec",
+        ),
+        CoverageItem(
+            "Planning Layer",
+            "complete" if state.has_plan else "pending",
+            "Technical plan available" if state.has_plan else "Plan not created",
+        ),
+        CoverageItem(
+            "AI-assisted Implementation",
+            "complete" if state.has_changes else "pending",
+            (
+                "Generated change manifest present"
+                if state.has_changes
+                else "Implementation not generated"
+            ),
+        ),
+        CoverageItem(
+            "Automated Test Generation",
+            "complete" if mapped_tests else "pending" if not state.has_changes else "attention",
+            f"{len(mapped_tests)} generated test file(s) mapped to AC IDs"
+            if mapped_tests
+            else "No mapped generated tests yet",
+        ),
+        CoverageItem(
+            "Quality Gates",
+            (
+                "complete"
+                if gate_status == "passed"
+                else "attention"
+                if state.has_validation
+                else "pending"
+            ),
+            f"Validation {gate_status}",
+        ),
+        CoverageItem(
+            "Human Approval Workflow",
+            "complete"
+            if state.plan_approved and state.release_approved
+            else "partial"
+            if state.plan_approved or state.release_approved
+            else "pending",
+            _approval_detail(state),
+        ),
+        CoverageItem(
+            "Auditability",
+            "complete" if state.has_evidence else "partial" if artefact_count >= 3 else "pending",
+            f"{artefact_count} audit artefact(s) captured",
+        ),
+    )
+
+
+def _approval_detail(state: RunState) -> str:
+    if state.plan_approved and state.release_approved:
+        return "Plan and release approved"
+    if state.plan_approved:
+        return "Plan approved; release pending"
+    if state.release_approved:
+        return "Release approved; plan approval missing"
+    return "Approvals pending"
+
+
+def _clamp_int(value: int | str, *, default: int, minimum: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(parsed, maximum))
+
+
+def _page_window(page: int, total_pages: int) -> tuple[int, ...]:
+    start = max(1, page - 2)
+    end = min(total_pages, page + 2)
+    return tuple(range(start, end + 1))
+
+
 def _stage_and_next_action(
     *,
     has_plan: bool,
@@ -184,4 +339,3 @@ def _stage_and_next_action(
     if not has_evidence:
         return "Release approved", "Generate deployment evidence"
     return "Evidence complete", "Review evidence"
-

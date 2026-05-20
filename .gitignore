@@ -11,4 +11,5 @@ build/
 dist/
 *.egg-info/
 audit/runs/
-
+specs/uploads/*
+!specs/uploads/.gitkeep
