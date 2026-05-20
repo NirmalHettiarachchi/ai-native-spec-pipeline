@@ -5,11 +5,12 @@
 {% set spec = detail.spec %}
 {% set manifest = detail.manifest %}
 {% set validation = detail.validation %}
-<section class="panel">
+<section class="panel run-hero">
   <div class="panel-header">
     <div>
+      <p class="eyebrow">Run detail</p>
       <h1>{{ state.feature }}</h1>
-      <p>{{ state.run_id }}</p>
+      <p class="run-id">{{ state.run_id }}</p>
     </div>
     <a class="button ghost" href="/">Back to runs</a>
   </div>
@@ -22,33 +23,209 @@
 </section>
 
 <section class="panel">
-  <h2>Actions</h2>
-  <div class="actions">
-    <form method="post" action="/runs/{{ state.run_id }}/approve-plan">
-      <input name="approver" placeholder="Approver name" required>
-      <button type="submit" {% if state.plan_approved or not state.has_plan %}disabled{% endif %}>
-        Approve Plan
-      </button>
-    </form>
-    <form method="post" action="/runs/{{ state.run_id }}/implement">
-      <button type="submit" {% if not state.plan_approved or state.has_changes %}disabled{% endif %}>
-        Generate Implementation
-      </button>
-    </form>
-    <form method="post" action="/runs/{{ state.run_id }}/validate">
-      <button type="submit" {% if not state.has_changes %}disabled{% endif %}>Run Validation</button>
-    </form>
-    <form method="post" action="/runs/{{ state.run_id }}/approve-release">
-      <input name="approver" placeholder="Approver name" required>
-      <button type="submit" {% if state.release_approved or state.validation_status != "passed" %}disabled{% endif %}>
-        Approve Release
-      </button>
-    </form>
-    <form method="post" action="/runs/{{ state.run_id }}/evidence">
-      <button type="submit" {% if not state.release_approved or state.has_evidence %}disabled{% endif %}>
-        Generate Evidence
-      </button>
-    </form>
+  <h2>Workflow</h2>
+  <ol class="workflow-stepper" aria-label="Run progress">
+    <li class="{{ 'done' if state.has_plan else 'current' }}">
+      <span>1</span>
+      <strong>Plan Created</strong>
+    </li>
+    <li class="{{ 'done' if state.plan_approved else 'current' if state.has_plan else 'blocked' }}">
+      <span>2</span>
+      <strong>Plan Approved</strong>
+    </li>
+    <li class="{{ 'done' if state.has_changes else 'current' if state.plan_approved else 'blocked' }}">
+      <span>3</span>
+      <strong>Implementation Generated</strong>
+    </li>
+    <li class="{{ 'done' if state.validation_status == 'passed' else 'current' if state.has_changes else 'blocked' }}">
+      <span>4</span>
+      <strong>Validation Passed</strong>
+    </li>
+    <li class="{{ 'done' if state.release_approved else 'current' if state.validation_status == 'passed' else 'blocked' }}">
+      <span>5</span>
+      <strong>Release Approved</strong>
+    </li>
+    <li class="{{ 'done' if state.has_evidence else 'current' if state.release_approved else 'blocked' }}">
+      <span>6</span>
+      <strong>Evidence Ready</strong>
+    </li>
+  </ol>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h2>Next Actions</h2>
+      <p>Follow these cards in order. Approval steps are human governance checkpoints.</p>
+    </div>
+  </div>
+  <div class="action-grid">
+    <article class="action-card {{ 'complete' if state.plan_approved else '' }}">
+      <div class="action-index">1</div>
+      <div class="action-body">
+        <h3>Approve Plan</h3>
+        <p>Confirm the generated technical plan is acceptable before code generation.</p>
+        <form method="post" action="/runs/{{ state.run_id }}/approve-plan" data-loading-label="Approving plan...">
+          <label for="plan_approver">Approver name</label>
+          <input
+            id="plan_approver"
+            name="approver"
+            placeholder="Your name"
+            required
+            minlength="2"
+            aria-describedby="plan_approver_error"
+            aria-invalid="{{ 'true' if action == 'approve-plan' and field == 'approver' else 'false' }}"
+            {% if state.plan_approved or not state.has_plan %}disabled{% endif %}
+          >
+          {% if error and action == "approve-plan" %}
+            <p id="plan_approver_error" class="field-error">{{ error }}</p>
+          {% endif %}
+          <p class="action-help">
+            {% if state.plan_approved %}
+              Plan approval is complete.
+            {% elif not state.has_plan %}
+              A plan must exist before approval.
+            {% else %}
+              Required before implementation can start.
+            {% endif %}
+          </p>
+          <button
+            type="submit"
+            data-loading-label="Approving plan..."
+            {% if state.plan_approved or not state.has_plan %}disabled{% endif %}
+          >
+            Approve Plan
+          </button>
+        </form>
+      </div>
+    </article>
+
+    <article class="action-card {{ 'complete' if state.has_changes else '' }}">
+      <div class="action-index">2</div>
+      <div class="action-body">
+        <h3>Generate Implementation</h3>
+        <p>Create bounded code and tests from the approved plan.</p>
+        {% if error and action == "implement" %}
+          <p class="field-error">{{ error }}</p>
+        {% endif %}
+        <p class="action-help">
+          {% if state.has_changes %}
+            Implementation has already been generated.
+          {% elif not state.plan_approved %}
+            Plan approval is required first.
+          {% else %}
+            Writes are restricted to approved demo app paths.
+          {% endif %}
+        </p>
+        <form method="post" action="/runs/{{ state.run_id }}/implement" data-loading-label="Generating implementation...">
+          <button
+            type="submit"
+            data-loading-label="Generating implementation..."
+            {% if not state.plan_approved or state.has_changes %}disabled{% endif %}
+          >
+            Generate Implementation
+          </button>
+        </form>
+      </div>
+    </article>
+
+    <article class="action-card {{ 'complete' if state.validation_status == 'passed' else '' }}">
+      <div class="action-index">3</div>
+      <div class="action-body">
+        <h3>Run Validation</h3>
+        <p>Execute linting, type checks, tests, security checks, and policy checks.</p>
+        {% if error and action == "validate" %}
+          <p class="field-error">{{ error }}</p>
+        {% endif %}
+        <p class="action-help">
+          {% if state.validation_status == "passed" %}
+            Validation is passing. Rerun only if generated files changed.
+          {% elif not state.has_changes %}
+            Generate implementation before validation.
+          {% else %}
+            Validation must pass before release approval.
+          {% endif %}
+        </p>
+        <form method="post" action="/runs/{{ state.run_id }}/validate" data-loading-label="Validating...">
+          <button
+            type="submit"
+            data-loading-label="Validating..."
+            {% if not state.has_changes or state.release_approved %}disabled{% endif %}
+          >
+            Run Validation
+          </button>
+        </form>
+      </div>
+    </article>
+
+    <article class="action-card {{ 'complete' if state.release_approved else '' }}">
+      <div class="action-index">4</div>
+      <div class="action-body">
+        <h3>Approve Release</h3>
+        <p>Record the final human checkpoint after all required validation gates pass.</p>
+        <form method="post" action="/runs/{{ state.run_id }}/approve-release" data-loading-label="Approving release...">
+          <label for="release_approver">Approver name</label>
+          <input
+            id="release_approver"
+            name="approver"
+            placeholder="Your name"
+            required
+            minlength="2"
+            aria-describedby="release_approver_error"
+            aria-invalid="{{ 'true' if action == 'approve-release' and field == 'approver' else 'false' }}"
+            {% if state.release_approved or state.validation_status != "passed" %}disabled{% endif %}
+          >
+          {% if error and action == "approve-release" %}
+            <p id="release_approver_error" class="field-error">{{ error }}</p>
+          {% endif %}
+          <p class="action-help">
+            {% if state.release_approved %}
+              Release approval is complete.
+            {% elif state.validation_status != "passed" %}
+              Passing validation is required first.
+            {% else %}
+              Approval is bound to the validation artefact hash.
+            {% endif %}
+          </p>
+          <button
+            type="submit"
+            data-loading-label="Approving release..."
+            {% if state.release_approved or state.validation_status != "passed" %}disabled{% endif %}
+          >
+            Approve Release
+          </button>
+        </form>
+      </div>
+    </article>
+
+    <article class="action-card {{ 'complete' if state.has_evidence else '' }}">
+      <div class="action-index">5</div>
+      <div class="action-body">
+        <h3>Generate Evidence</h3>
+        <p>Create the deployment evidence packet with approvals, gates, and Git state.</p>
+        {% if error and action == "evidence" %}
+          <p class="field-error">{{ error }}</p>
+        {% endif %}
+        <p class="action-help">
+          {% if state.has_evidence %}
+            Deployment evidence is ready.
+          {% elif not state.release_approved %}
+            Release approval is required first.
+          {% else %}
+            Evidence can now be generated.
+          {% endif %}
+        </p>
+        <form method="post" action="/runs/{{ state.run_id }}/evidence" data-loading-label="Generating evidence...">
+          <button
+            type="submit"
+            data-loading-label="Generating evidence..."
+            {% if not state.release_approved or state.has_evidence %}disabled{% endif %}
+          >
+            Generate Evidence
+          </button>
+        </form>
+      </div>
+    </article>
   </div>
 </section>
 
@@ -70,7 +247,8 @@
   </div>
   <div class="panel">
     <h2>Artefacts</h2>
-    <ul class="compact">
+    <p>Open safe, known audit artefacts produced by this run.</p>
+    <ul class="compact artefact-list">
       {% for artefact in detail.artefacts %}
         <li><a href="/runs/{{ state.run_id }}/artefacts/{{ artefact }}">{{ artefact }}</a></li>
       {% else %}
@@ -95,10 +273,10 @@
       <tbody>
         {% for file in manifest.files or [] %}
           <tr>
-            <td>{{ file.path }}</td>
-            <td>{{ file.purpose }}</td>
-            <td>{{ file.acceptance_criteria|join(", ") if file.acceptance_criteria else "N/A" }}</td>
-            <td><code>{{ file.content_sha256 }}</code></td>
+            <td data-label="Path">{{ file.path }}</td>
+            <td data-label="Purpose">{{ file.purpose }}</td>
+            <td data-label="Acceptance Criteria">{{ file.acceptance_criteria|join(", ") if file.acceptance_criteria else "N/A" }}</td>
+            <td data-label="Hash"><code>{{ file.content_sha256 }}</code></td>
           </tr>
         {% else %}
           <tr><td colspan="4" class="empty">Implementation has not been generated.</td></tr>
@@ -123,10 +301,10 @@
       <tbody>
         {% for gate in validation.gates or [] %}
           <tr>
-            <td>{{ gate.name }}</td>
-            <td><span class="status {{ gate.status }}">{{ gate.status }}</span></td>
-            <td><code>{{ " ".join(gate.command) if gate.command else "policy" }}</code></td>
-            <td>
+            <td data-label="Gate">{{ gate.name }}</td>
+            <td data-label="Status"><span class="status {{ gate.status }}">{{ gate.status }}</span></td>
+            <td data-label="Command"><code>{{ " ".join(gate.command) if gate.command else "policy" }}</code></td>
+            <td data-label="Details">
               <details>
                 <summary>Output</summary>
                 <pre>{{ gate.stdout }}{{ gate.stderr }}{{ "\n".join(gate.details) }}</pre>

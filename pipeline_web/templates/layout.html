@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Spec Pipeline Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
+    <script src="{{ url_for('static', path='/app.js') }}" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -20,6 +21,11 @@
       {% endif %}
       {% block content %}{% endblock %}
     </main>
+    <div class="loading-overlay" data-loading-overlay aria-live="polite" aria-hidden="true">
+      <div class="loading-box">
+        <span class="spinner" aria-hidden="true"></span>
+        <span data-loading-message>Working...</span>
+      </div>
+    </div>
   </body>
 </html>
-

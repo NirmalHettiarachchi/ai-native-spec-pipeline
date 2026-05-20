@@ -22,6 +22,7 @@ from pipeline.spec_parser import parse_feature_spec
 from pipeline_web.run_state import list_runs, read_allowed_artefact, read_run_detail
 
 BASE_DIR = Path(__file__).resolve().parent
+SPEC_SUFFIXES = {".yaml", ".yml", ".json", ".md", ".markdown"}
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 app = FastAPI(title="Spec-Driven Pipeline Dashboard")
@@ -29,7 +30,13 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 
 
 @app.get("/", response_class=HTMLResponse)
-async def runs(request: Request, message: str = "", error: str = "") -> HTMLResponse:
+async def runs(
+    request: Request,
+    message: str = "",
+    error: str = "",
+    field: str = "",
+    action: str = "",
+) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "runs.html",
@@ -37,6 +44,8 @@ async def runs(request: Request, message: str = "", error: str = "") -> HTMLResp
             "runs": list_runs(),
             "message": message,
             "error": error,
+            "field": field,
+            "action": action,
             "default_spec": "specs/examples/discount_calculator.yaml",
         },
     )
@@ -45,14 +54,19 @@ async def runs(request: Request, message: str = "", error: str = "") -> HTMLResp
 @app.post("/runs")
 async def create_run(request: Request) -> RedirectResponse:
     form = await _read_form(request)
-    spec_path = Path(form.get("spec_file", "").strip())
+    spec_path_text = form.get("spec_file", "").strip()
+    validation_error = _validate_spec_path(spec_path_text)
+    if validation_error:
+        return _redirect("/", error=validation_error, field="spec_file", action="create-run")
+
+    spec_path = Path(spec_path_text)
     try:
         spec = parse_feature_spec(spec_path)
         run_id, run_dir, spec_hash = initialize_run(spec, spec_path)
         plan = create_plan(spec, run_id, spec_hash)
         write_plan(run_dir, plan, spec)
     except PipelineError as exc:
-        return _redirect("/", error=str(exc))
+        return _redirect("/", error=str(exc), field="spec_file", action="create-run")
     return _redirect(f"/runs/{run_id}", message="Run created and plan generated.")
 
 
@@ -62,6 +76,8 @@ async def run_detail(
     run_id: str,
     message: str = "",
     error: str = "",
+    field: str = "",
+    action: str = "",
 ) -> HTMLResponse:
     try:
         detail = read_run_detail(run_id)
@@ -69,29 +85,50 @@ async def run_detail(
         return templates.TemplateResponse(
             request,
             "runs.html",
-            {"runs": list_runs(), "message": "", "error": str(exc)},
+            {
+                "runs": list_runs(),
+                "message": "",
+                "error": str(exc),
+                "field": "",
+                "action": "",
+                "default_spec": "specs/examples/discount_calculator.yaml",
+            },
             status_code=404,
         )
     return templates.TemplateResponse(
         request,
         "run_detail.html",
-        {"detail": detail, "message": message, "error": error},
+        {"detail": detail, "message": message, "error": error, "field": field, "action": action},
     )
 
 
 @app.post("/runs/{run_id}/approve-plan")
 async def approve_plan(request: Request, run_id: str) -> RedirectResponse:
     form = await _read_form(request)
+    approver_error = _validate_approver(form.get("approver", ""))
+    if approver_error:
+        return _redirect(
+            f"/runs/{run_id}",
+            error=approver_error,
+            field="approver",
+            action="approve-plan",
+        )
     return _run_action(
         run_id,
         lambda: create_approval(run_id, "plan", form.get("approver", "")),
         "Plan approval recorded.",
+        "approve-plan",
     )
 
 
 @app.post("/runs/{run_id}/implement")
 async def implement(run_id: str) -> RedirectResponse:
-    return _run_action(run_id, lambda: implement_run(run_id), "Implementation generated.")
+    return _run_action(
+        run_id,
+        lambda: implement_run(run_id),
+        "Implementation generated.",
+        "implement",
+    )
 
 
 @app.post("/runs/{run_id}/validate")
@@ -101,22 +138,36 @@ async def validate(run_id: str) -> RedirectResponse:
         if results.overall_status != "passed":
             raise PipelineError("Validation failed. Review gate output before release approval.")
 
-    return _run_action(run_id, action, "Validation passed.")
+    return _run_action(run_id, action, "Validation passed.", "validate")
 
 
 @app.post("/runs/{run_id}/approve-release")
 async def approve_release(request: Request, run_id: str) -> RedirectResponse:
     form = await _read_form(request)
+    approver_error = _validate_approver(form.get("approver", ""))
+    if approver_error:
+        return _redirect(
+            f"/runs/{run_id}",
+            error=approver_error,
+            field="approver",
+            action="approve-release",
+        )
     return _run_action(
         run_id,
         lambda: create_approval(run_id, "release", form.get("approver", "")),
         "Release approval recorded.",
+        "approve-release",
     )
 
 
 @app.post("/runs/{run_id}/evidence")
 async def evidence(run_id: str) -> RedirectResponse:
-    return _run_action(run_id, lambda: create_deployment_evidence(run_id), "Evidence generated.")
+    return _run_action(
+        run_id,
+        lambda: create_deployment_evidence(run_id),
+        "Evidence generated.",
+        "evidence",
+    )
 
 
 @app.get("/runs/{run_id}/artefacts/{name}", response_class=HTMLResponse)
@@ -160,19 +211,52 @@ async def _read_form(request: Request) -> dict[str, str]:
     return {key: values[-1] for key, values in parse_qs(body, keep_blank_values=True).items()}
 
 
-def _run_action(run_id: str, action: Callable[[], object], success: str) -> RedirectResponse:
+def _run_action(
+    run_id: str,
+    action: Callable[[], object],
+    success: str,
+    action_name: str,
+) -> RedirectResponse:
     try:
         action()
     except PipelineError as exc:
-        return _redirect(f"/runs/{run_id}", error=str(exc))
-    return _redirect(f"/runs/{run_id}", message=success)
+        return _redirect(f"/runs/{run_id}", error=str(exc), action=action_name)
+    return _redirect(f"/runs/{run_id}", message=success, action=action_name)
 
 
-def _redirect(path: str, *, message: str = "", error: str = "") -> RedirectResponse:
+def _redirect(
+    path: str,
+    *,
+    message: str = "",
+    error: str = "",
+    field: str = "",
+    action: str = "",
+) -> RedirectResponse:
     params: dict[str, str] = {}
     if message:
         params["message"] = message
     if error:
         params["error"] = error
+    if field:
+        params["field"] = field
+    if action:
+        params["action"] = action
     suffix = f"?{urlencode(params)}" if params else ""
     return RedirectResponse(f"{path}{suffix}", status_code=303)
+
+
+def _validate_spec_path(spec_path: str) -> str:
+    if not spec_path:
+        return "Enter a spec path before creating a run."
+    if Path(spec_path).suffix.lower() not in SPEC_SUFFIXES:
+        return "Spec path must end with .yaml, .yml, .json, .md, or .markdown."
+    return ""
+
+
+def _validate_approver(approver: str) -> str:
+    stripped = approver.strip()
+    if not stripped:
+        return "Enter the approver name."
+    if len(stripped) < 2:
+        return "Approver name must be at least 2 characters."
+    return ""

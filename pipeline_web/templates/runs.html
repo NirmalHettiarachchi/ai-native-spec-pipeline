@@ -1,22 +1,55 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<section class="panel">
+<section class="panel intro-panel">
   <div class="panel-header">
     <div>
+      <p class="eyebrow">Local governance dashboard</p>
       <h1>Pipeline Runs</h1>
-      <p>Create a run from a feature spec, then approve and execute each governed stage.</p>
+      <p class="lead">
+        Create a run from a feature spec, then approve and execute each governed stage.
+      </p>
     </div>
   </div>
-  <form class="inline-form" method="post" action="/runs">
-    <label for="spec_file">Spec path</label>
-    <input id="spec_file" name="spec_file" value="{{ default_spec }}" required>
-    <button type="submit">Create Run</button>
+  <ol class="mini-steps" aria-label="Pipeline flow">
+    <li>Plan</li>
+    <li>Approve</li>
+    <li>Generate</li>
+    <li>Validate</li>
+    <li>Release</li>
+    <li>Evidence</li>
+  </ol>
+  <form class="create-run-form" method="post" action="/runs" data-loading-label="Creating run...">
+    <div class="field-group">
+      <label for="spec_file">Feature spec path</label>
+      <input
+        id="spec_file"
+        name="spec_file"
+        value="{{ default_spec }}"
+        placeholder="specs/examples/discount_calculator.yaml"
+        required
+        aria-describedby="spec_file_help spec_file_error"
+        aria-invalid="{{ 'true' if field == 'spec_file' else 'false' }}"
+      >
+      <p id="spec_file_help" class="field-help">
+        Use a Markdown, YAML, or JSON spec file already available in this workspace.
+      </p>
+      {% if error and field == "spec_file" %}
+        <p id="spec_file_error" class="field-error">{{ error }}</p>
+      {% endif %}
+    </div>
+    <button type="submit" data-loading-label="Creating run...">Create Run</button>
   </form>
 </section>
 
 <section class="panel">
-  <div class="table-wrap">
+  <div class="panel-header">
+    <div>
+      <h2>Recent Runs</h2>
+      <p>Open a run to review its approvals, generated changes, gates, and evidence.</p>
+    </div>
+  </div>
+  <div class="table-wrap run-table">
     <table>
       <thead>
         <tr>
@@ -49,6 +82,36 @@
       </tbody>
     </table>
   </div>
+  <div class="run-card-list" aria-label="Runs">
+    {% for run in runs %}
+      <article class="run-card">
+        <div class="run-card-header">
+          <div>
+            <h3>{{ run.feature }}</h3>
+            <p>{{ run.run_id }}</p>
+          </div>
+          <span class="badge">{{ run.stage }}</span>
+        </div>
+        <dl class="run-card-meta">
+          <div>
+            <dt>Validation</dt>
+            <dd><span class="status {{ run.validation_status }}">{{ run.validation_status }}</span></dd>
+          </div>
+          <div>
+            <dt>Plan Approval</dt>
+            <dd>{{ "Complete" if run.plan_approved else "Needed" }}</dd>
+          </div>
+          <div>
+            <dt>Release Approval</dt>
+            <dd>{{ "Complete" if run.release_approved else "Needed" }}</dd>
+          </div>
+        </dl>
+        <p class="next-action">{{ run.next_action }}</p>
+        <a class="button full" href="/runs/{{ run.run_id }}">Open Run</a>
+      </article>
+    {% else %}
+      <p class="empty">No audit runs found.</p>
+    {% endfor %}
+  </div>
 </section>
 {% endblock %}
-
