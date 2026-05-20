@@ -1,15 +1,20 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<section class="panel">
-  <div class="panel-header">
-    <div>
-      <p class="eyebrow">Audit artefact</p>
-      <h1>{{ name }}</h1>
-      <p>{{ run_id }}</p>
+<section class="card shadow-sm border-0">
+  <div class="card-body">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
+      <div>
+        <p class="text-uppercase text-primary fw-bold small mb-2">Audit artefact</p>
+        <h1 class="h4 mb-1 text-break">{{ name }}</h1>
+        <p class="text-secondary text-break mb-0">{{ run_id }}</p>
+      </div>
+      <div>
+        <a class="btn btn-outline-primary" href="/runs/{{ run_id }}">Back to run</a>
+      </div>
     </div>
-    <a class="button ghost" href="/runs/{{ run_id }}">Back to run</a>
+    <pre class="artefact overflow-auto mb-0">{{ content }}</pre>
   </div>
-  <pre class="artefact">{{ content }}</pre>
 </section>
 {% endblock %}
+

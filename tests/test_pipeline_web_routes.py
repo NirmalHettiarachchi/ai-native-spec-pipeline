@@ -45,6 +45,8 @@ def test_web_spec_path_validation_renders_inline_errors(
     assert empty_response.status_code == 200
     assert "Enter a spec path before creating a run." in empty_response.text
     assert 'aria-invalid="true"' in empty_response.text
+    assert "is-invalid" in empty_response.text
+    assert "invalid-feedback" in empty_response.text
 
     extension_response = client.post("/runs", data={"spec_file": "feature.txt"})
     assert extension_response.status_code == 200
@@ -66,6 +68,7 @@ def test_web_approver_validation_renders_inline_errors(
     assert empty_response.status_code == 200
     assert "Enter the approver name." in empty_response.text
     assert "plan_approver_error" in empty_response.text
+    assert "invalid-feedback" in empty_response.text
 
     short_response = client.post(f"/runs/{run_id}/approve-plan", data={"approver": "A"})
     assert "Approver name must be at least 2 characters." in short_response.text
@@ -88,19 +91,25 @@ def test_web_pages_include_mobile_and_loading_affordances(
 
     runs_page = client.get("/")
     assert "run-card-list" in runs_page.text
+    assert "table-responsive" in runs_page.text
     assert "loading-overlay" in runs_page.text
+    assert "spinner-border" in runs_page.text
     assert 'data-loading-label="Creating run..."' in runs_page.text
 
     detail = client.get(f"/runs/{run_id}")
     assert "workflow-stepper" in detail.text
     assert "action-card" in detail.text
+    assert "row-cols-md-2 row-cols-xl-3" in detail.text
     assert "Plan approval is required first." in detail.text
     assert 'data-loading-label="Validating..."' in detail.text
 
+    layout = Path("pipeline_web/templates/layout.html").read_text(encoding="utf-8")
+    assert "bootstrap@5.3.3" in layout
     css = Path("pipeline_web/static/app.css").read_text(encoding="utf-8")
     assert "@media (max-width: 700px)" in css
-    assert ".run-card-list" in css
-    assert ".action-grid" in css
+    assert ".artefact" in css
+    assert ".log-output" in css
+    assert "repeat(5" not in css
 
 
 def test_web_routes_can_execute_governed_flow(
