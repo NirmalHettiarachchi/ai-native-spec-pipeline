@@ -7,12 +7,12 @@ import json
 import sys
 from pathlib import Path
 
-from pipeline.audit import initialize_run
 from pipeline.approval import create_approval
-from pipeline.evidence import create_deployment_evidence
+from pipeline.audit import initialize_run
 from pipeline.errors import PipelineError
-from pipeline.generator import implement_run
+from pipeline.evidence import create_deployment_evidence
 from pipeline.gates import validate_run
+from pipeline.generator import implement_run
 from pipeline.planner import create_plan, write_plan
 from pipeline.spec_parser import parse_feature_spec
 from pipeline.workflow import run_pipeline
@@ -47,7 +47,10 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("run_id")
     validate.set_defaults(func=_cmd_validate)
 
-    evidence = subparsers.add_parser("evidence", help="Write deployment evidence after release approval.")
+    evidence = subparsers.add_parser(
+        "evidence",
+        help="Write deployment evidence after release approval.",
+    )
     evidence.add_argument("run_id")
     evidence.set_defaults(func=_cmd_evidence)
 

@@ -42,7 +42,9 @@ def run_pipeline(spec_file: Path, run_id: str | None = None) -> list[str]:
     validation = validate_run(run_id)
     messages.append(f"validation: {validation.overall_status}")
     if validation.overall_status != "passed":
-        raise PipelineError("validation failed; inspect validation_results.json before release approval")
+        raise PipelineError(
+            "validation failed; inspect validation_results.json before release approval"
+        )
 
     try:
         require_approval(run_id, "release")
@@ -56,4 +58,3 @@ def run_pipeline(spec_file: Path, run_id: str | None = None) -> list[str]:
 
     evidence_path = create_deployment_evidence(run_id)
     return [*messages, f"deployment evidence: {evidence_path}"]
-

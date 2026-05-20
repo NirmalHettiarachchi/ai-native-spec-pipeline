@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Literal
 
 from pipeline.audit import read_json, require_run_dir, utc_now, write_json
 from pipeline.models import ChangeManifest, FeatureSpec, GateResult, PlanArtifact, ValidationResults
@@ -38,7 +39,9 @@ def validate_run(run_id: str, repo_root: Path | None = None) -> ValidationResult
         ),
         _policy_gate(run_dir, repo_root),
     ]
-    overall_status = "passed" if all(gate.status == "passed" for gate in gates) else "failed"
+    overall_status: Literal["passed", "failed"] = (
+        "passed" if all(gate.status == "passed" for gate in gates) else "failed"
+    )
     results = ValidationResults(
         run_id=run_id,
         overall_status=overall_status,
@@ -154,4 +157,3 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
         return True
     except ValueError:
         return False
-

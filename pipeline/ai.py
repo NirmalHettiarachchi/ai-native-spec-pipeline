@@ -299,9 +299,15 @@ def {plan.target_function}() -> dict[str, object]:
         "acceptance_criteria": ACCEPTANCE_CRITERIA,
     }}
 '''
-    tests = f'''from demo_app.{plan.target_module} import ACCEPTANCE_CRITERIA, {plan.target_function}
+    tests = f'''from demo_app.{plan.target_module} import (
+    ACCEPTANCE_CRITERIA,
+    {plan.target_function},
+)
 
-ACCEPTANCE_COVERAGE = {{criterion_id: "test_acceptance_criteria_are_exposed" for criterion_id in ACCEPTANCE_CRITERIA}}
+ACCEPTANCE_COVERAGE = {{
+    criterion_id: "test_acceptance_criteria_are_exposed"
+    for criterion_id in ACCEPTANCE_CRITERIA
+}}
 
 
 def test_acceptance_criteria_are_exposed() -> None:

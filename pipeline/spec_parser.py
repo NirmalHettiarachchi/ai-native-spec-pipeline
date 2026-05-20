@@ -183,7 +183,12 @@ def _parse_markdown_acceptance(text: str) -> list[dict[str, str]]:
     for index, item in enumerate(items, start=1):
         match = re.match(r"^([A-Za-z]{1,5}[-_]?\d{1,4})\s*[:\-]\s*(.+)$", item)
         if match:
-            criteria.append({"id": match.group(1).upper().replace("_", "-"), "description": match.group(2)})
+            criteria.append(
+                {
+                    "id": match.group(1).upper().replace("_", "-"),
+                    "description": match.group(2),
+                }
+            )
         else:
             criteria.append({"id": f"AC-{index:03d}", "description": item})
     return criteria
@@ -230,10 +235,18 @@ def _coerce_acceptance_criteria(value: Any) -> list[dict[str, str]]:
             criteria.extend(_parse_markdown_acceptance(item))
         elif isinstance(item, dict):
             normalized = {_KEY_ALIASES.get(_normalize_key(str(k)), k): v for k, v in item.items()}
-            criterion_id = str(normalized.get("id") or normalized.get("criterion_id") or f"AC-{index:03d}")
-            description = normalized.get("description") or normalized.get("criterion") or normalized.get("text")
+            criterion_id = str(
+                normalized.get("id") or normalized.get("criterion_id") or f"AC-{index:03d}"
+            )
+            description = (
+                normalized.get("description")
+                or normalized.get("criterion")
+                or normalized.get("text")
+            )
             if description is None:
-                raise SpecValidationError(f"acceptance criterion {criterion_id} is missing description")
+                raise SpecValidationError(
+                    f"acceptance criterion {criterion_id} is missing description"
+                )
             criteria.append({"id": criterion_id, "description": str(description)})
         else:
             raise SpecValidationError("acceptance_criteria items must be strings or objects")
@@ -242,4 +255,3 @@ def _coerce_acceptance_criteria(value: Any) -> list[dict[str, str]]:
 
 def _normalize_key(key: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", key.strip().lower()).strip("_")
-

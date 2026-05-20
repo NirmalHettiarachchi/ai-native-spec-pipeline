@@ -22,3 +22,16 @@ The implementation keeps AI output bounded by deterministic controls:
 - approvals bind to artefact hashes
 - audit records capture prompts, provider metadata, outputs, and gate results
 
+## Source-Control Practice
+
+The repository is intentionally committed in small milestones:
+
+- project and tooling bootstrap
+- spec intake
+- planning
+- approvals
+- bounded generation
+- quality gates and evidence
+- documentation and verification
+
+This matches the pipeline's own governance posture: reviewable changes, visible checkpoints, and no single opaque final commit.

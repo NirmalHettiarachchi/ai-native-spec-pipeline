@@ -62,7 +62,8 @@ def create_deployment_evidence(run_id: str, repo_root: Path | None = None) -> Pa
     lines.extend(
         [
             "- Re-run validation with `python -m pipeline validate <run-id>`.",
-            "- Review prompts and generated outputs in `ai_interactions.jsonl` and `generated_output.json`.",
+            "- Review prompts and generated outputs in `ai_interactions.jsonl` "
+            "and `generated_output.json`.",
             "- Review the bounded change manifest in `change_manifest.json`.",
             "",
         ]
@@ -93,4 +94,3 @@ def _git(args: list[str], repo_root: Path) -> str:
     if completed.returncode != 0:
         return ""
     return completed.stdout.strip()
-

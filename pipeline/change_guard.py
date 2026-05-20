@@ -8,7 +8,11 @@ from pipeline.errors import PipelineError
 from pipeline.models import GeneratedFile, PlanArtifact
 
 
-def validate_generated_paths(files: list[GeneratedFile], plan: PlanArtifact, repo_root: Path) -> None:
+def validate_generated_paths(
+    files: list[GeneratedFile],
+    plan: PlanArtifact,
+    repo_root: Path,
+) -> None:
     allowed_roots = [(repo_root / path).resolve() for path in plan.allowed_paths]
     if not files:
         raise PipelineError("generated change set contains no files")
@@ -17,14 +21,18 @@ def validate_generated_paths(files: list[GeneratedFile], plan: PlanArtifact, rep
     for generated_file in files:
         relative_path = Path(generated_file.path)
         if relative_path.is_absolute() or ".." in relative_path.parts:
-            raise PipelineError(f"generated path is not a safe relative path: {generated_file.path}")
+            raise PipelineError(
+                f"generated path is not a safe relative path: {generated_file.path}"
+            )
 
         target = (repo_root / relative_path).resolve()
         if not any(_is_relative_to(target, allowed_root) for allowed_root in allowed_roots):
             raise PipelineError(f"generated file is outside approved paths: {generated_file.path}")
 
         if generated_file.path not in planned_paths:
-            raise PipelineError(f"generated file was not listed in the approved plan: {generated_file.path}")
+            raise PipelineError(
+                f"generated file was not listed in the approved plan: {generated_file.path}"
+            )
 
 
 def _is_relative_to(path: Path, parent: Path) -> bool:
@@ -33,4 +41,3 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
         return True
     except ValueError:
         return False
-
