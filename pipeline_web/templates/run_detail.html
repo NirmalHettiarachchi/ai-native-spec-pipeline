@@ -17,6 +17,15 @@
         <a class="btn btn-outline-primary" href="/">Back to runs</a>
       </div>
     </div>
+    <div class="provider-status mb-4" aria-label="AI provider status">
+      <span><strong>AI mode:</strong> {{ runtime_config.ai_provider_mode }}</span>
+      <span><strong>Provider:</strong> {{ runtime_config.resolved_ai_provider }}</span>
+      <span><strong>Model:</strong> {{ runtime_config.openai_model }}</span>
+      <span>
+        <strong>OpenAI key:</strong>
+        {{ "configured" if runtime_config.openai_api_key_configured else "not configured" }}
+      </span>
+    </div>
     <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3">
       <div class="col">
         <div class="card h-100 bg-light border-0">

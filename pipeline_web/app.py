@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -16,6 +17,7 @@ from starlette.datastructures import FormData
 
 from pipeline.approval import create_approval
 from pipeline.audit import initialize_run
+from pipeline.config import get_runtime_config
 from pipeline.errors import PipelineError
 from pipeline.evidence import create_deployment_evidence
 from pipeline.gates import validate_run
@@ -59,6 +61,7 @@ async def runs(
             "field": field,
             "action": action,
             "default_spec": DEFAULT_SPEC,
+            "runtime_config": get_runtime_config().to_public_dict(),
         },
     )
 
@@ -106,14 +109,64 @@ async def run_detail(
                 "field": "",
                 "action": "",
                 "default_spec": DEFAULT_SPEC,
+                "runtime_config": get_runtime_config().to_public_dict(),
             },
             status_code=404,
         )
     return templates.TemplateResponse(
         request,
         "run_detail.html",
-        {"detail": detail, "message": message, "error": error, "field": field, "action": action},
+        {
+            "detail": detail,
+            "message": message,
+            "error": error,
+            "field": field,
+            "action": action,
+            "runtime_config": get_runtime_config().to_public_dict(),
+        },
     )
+
+
+@app.get("/api/health")
+async def api_health() -> dict[str, str]:
+    return {"status": "ok", "service": "spec-pipeline"}
+
+
+@app.get("/api/config")
+async def api_config() -> dict[str, str | bool]:
+    return get_runtime_config().to_public_dict()
+
+
+@app.get("/api/runs")
+async def api_runs(page: str = "1", page_size: str = "10") -> dict[str, Any]:
+    run_page = list_runs_page(page, page_size)
+    return {
+        "items": [_serialize_dataclass(run) for run in run_page.items],
+        "total": run_page.total,
+        "page": run_page.page,
+        "page_size": run_page.page_size,
+        "total_pages": run_page.total_pages,
+    }
+
+
+@app.get("/api/runs/{run_id}")
+async def api_run_detail(run_id: str) -> dict[str, Any]:
+    try:
+        detail = read_run_detail(run_id)
+    except PipelineError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {
+        "state": _serialize_dataclass(detail["state"]),
+        "spec": detail["spec"],
+        "plan": detail["plan"],
+        "manifest": detail["manifest"],
+        "validation": detail["validation"],
+        "plan_approval": detail["plan_approval"],
+        "release_approval": detail["release_approval"],
+        "ai_interactions": detail["ai_interactions"],
+        "artefacts": detail["artefacts"],
+        "coverage": [_serialize_dataclass(item) for item in detail["coverage"]],
+    }
 
 
 @app.post("/runs/{run_id}/approve-plan")
@@ -233,13 +286,18 @@ async def _read_form(request: Request) -> dict[str, str]:
 
 
 async def _resolve_submitted_spec(form: FormData) -> Path:
+    source = str(form.get("spec_source") or "repository").strip()
     selected = str(form.get("spec_file") or "").strip()
     upload: Any = form.get("spec_upload")
     upload_name = str(getattr(upload, "filename", "") or "").strip()
-    if upload_name:
+    if source == "upload":
+        if not upload_name:
+            raise PipelineError("Choose a spec file to upload.")
         content = await upload.read()
         return save_uploaded_spec(upload_name, content)
-    return resolve_spec_path(selected)
+    if source == "repository":
+        return resolve_spec_path(selected)
+    raise PipelineError("Choose repository spec or upload spec.")
 
 
 def _run_action(
@@ -299,3 +357,10 @@ def _validate_approver(approver: str) -> str:
     if not APPROVER_PATTERN.fullmatch(stripped):
         return "Use letters, numbers, spaces, . _ - or apostrophe."
     return ""
+
+
+def _serialize_dataclass(value: Any) -> dict[str, Any]:
+    serialized = asdict(value)
+    if "run_dir" in serialized:
+        serialized["run_dir"] = str(serialized["run_dir"])
+    return serialized

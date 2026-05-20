@@ -76,7 +76,7 @@ def test_web_create_run_from_uploaded_spec(
 
     response = client.post(
         "/runs",
-        data={"spec_file": ""},
+        data={"spec_source": "upload", "spec_file": ""},
         files={"spec_upload": ("uploaded.yaml", content, "application/x-yaml")},
     )
 
@@ -95,7 +95,7 @@ def test_web_bad_upload_renders_inline_only(
 
     response = client.post(
         "/runs",
-        data={"spec_file": ""},
+        data={"spec_source": "upload", "spec_file": ""},
         files={"spec_upload": ("bad.txt", b"not a spec", "text/plain")},
     )
 
@@ -156,6 +156,15 @@ def test_web_pages_include_mobile_and_loading_affordances(
     assert 'id="create-run"' in runs_page.text
     assert "create-run-control" in runs_page.text
     assert 'enctype="multipart/form-data"' in runs_page.text
+    assert "provider-status" in runs_page.text
+    assert "AI mode:" in runs_page.text
+    assert "Provider:" in runs_page.text
+    assert 'data-spec-source-form' in runs_page.text
+    assert 'id="spec_source_repository"' in runs_page.text
+    assert 'id="spec_source_upload"' in runs_page.text
+    assert 'data-spec-source-panel="repository"' in runs_page.text
+    assert 'data-spec-source-panel="upload"' in runs_page.text
+    assert 'hidden' in runs_page.text
     assert 'id="spec_upload"' in runs_page.text
     assert "<select" in runs_page.text
     assert "specs/examples/discount_calculator.yaml" in runs_page.text
@@ -188,6 +197,7 @@ def test_web_pages_include_mobile_and_loading_affordances(
 
     js = Path("pipeline_web/static/app.js").read_text(encoding="utf-8")
     assert "function setLoading" in js
+    assert "syncSpecSource" in js
     assert "pageshow" in js
     assert "visibilitychange" in js
     assert "setTimeout" in js
@@ -280,3 +290,34 @@ def test_web_run_list_renders_pagination(
     assert "Showing 1-10 of 11" in response.text
     assert 'aria-label="Run pages"' in response.text
     assert "page=2" in response.text
+
+
+def test_web_api_endpoints_expose_status_and_runs(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("PIPELINE_AUDIT_ROOT", str(tmp_path))
+    client = TestClient(app, follow_redirects=False)
+    run_id = _create_run(client)
+
+    health = client.get("/api/health")
+    assert health.status_code == 200
+    assert health.json()["status"] == "ok"
+
+    config = client.get("/api/config")
+    assert config.status_code == 200
+    assert "openai_api_key_configured" in config.json()
+    assert "OPENAI_API_KEY" not in config.text
+
+    runs = client.get("/api/runs")
+    assert runs.status_code == 200
+    assert runs.json()["total"] == 1
+    assert runs.json()["items"][0]["run_id"] == run_id
+
+    detail = client.get(f"/api/runs/{run_id}")
+    assert detail.status_code == 200
+    assert detail.json()["state"]["run_id"] == run_id
+    assert "coverage" in detail.json()
+
+    missing = client.get("/api/runs/missing")
+    assert missing.status_code == 404

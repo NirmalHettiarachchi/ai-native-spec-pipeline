@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
-import os
-import urllib.error
-import urllib.request
-from typing import Protocol
+from typing import Any, Protocol, cast
 
+from pipeline.config import (
+    RuntimeConfig,
+    get_openai_api_key,
+    get_runtime_config,
+    validate_provider_mode,
+)
 from pipeline.errors import PipelineError
 from pipeline.models import FeatureSpec, GeneratedChangeSet, GeneratedFile, PlanArtifact
 
@@ -15,18 +18,26 @@ from pipeline.models import FeatureSpec, GeneratedChangeSet, GeneratedFile, Plan
 class AIProvider(Protocol):
     name: str
     model: str
+    last_interaction_metadata: dict[str, Any]
 
     def generate_changes(self, spec: FeatureSpec, plan: PlanArtifact) -> GeneratedChangeSet:
         """Return proposed code and test changes for a spec and approved plan."""
 
 
 def get_ai_provider() -> AIProvider:
-    provider = os.getenv("PIPELINE_AI_PROVIDER", "local").strip().lower()
-    if provider == "local":
+    config = get_runtime_config()
+    validate_provider_mode(config.ai_provider_mode)
+    if config.resolved_ai_provider == "local":
         return LocalTemplateProvider()
-    if provider == "openai":
-        return OpenAICompatibleProvider()
-    raise PipelineError(f"unsupported PIPELINE_AI_PROVIDER: {provider}")
+    if config.resolved_ai_provider == "openai":
+        return OpenAIResponsesProvider(config)
+    raise PipelineError(f"unsupported PIPELINE_AI_PROVIDER: {config.ai_provider_mode}")
+
+
+def get_provider_audit_metadata(provider: AIProvider) -> dict[str, Any]:
+    """Return provider metadata safe for audit logs."""
+
+    return getattr(provider, "last_interaction_metadata", {})
 
 
 def build_generation_prompt(spec: FeatureSpec, plan: PlanArtifact) -> str:
@@ -54,6 +65,10 @@ class LocalTemplateProvider:
 
     name = "local-template"
     model = "deterministic-v1"
+    last_interaction_metadata: dict[str, Any] = {
+        "request": {"provider_mode": "local", "network": "disabled"},
+        "response": {"source": "deterministic-template"},
+    }
 
     def generate_changes(self, spec: FeatureSpec, plan: PlanArtifact) -> GeneratedChangeSet:
         if plan.target_function == "calculate_discounted_price":
@@ -76,49 +91,73 @@ class LocalTemplateProvider:
         )
 
 
-class OpenAICompatibleProvider:
-    """Minimal OpenAI-compatible chat completions adapter for optional live generation."""
+class OpenAIResponsesProvider:
+    """OpenAI Responses API provider using structured JSON output."""
 
-    name = "openai-compatible"
+    name = "openai-responses"
 
-    def __init__(self) -> None:
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-        self.base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise PipelineError("OPENAI_API_KEY is required when PIPELINE_AI_PROVIDER=openai")
+    def __init__(self, config: RuntimeConfig) -> None:
+        self.model = config.openai_model
+        self.reasoning_effort = config.openai_reasoning_effort
+        self.base_url = config.openai_base_url
+        self.last_interaction_metadata: dict[str, Any] = {}
+        api_key = get_openai_api_key()
+        try:
+            from openai import OpenAI
+        except ImportError as exc:  # pragma: no cover - dependency is installed in supported setup
+            raise PipelineError(
+                "install the openai package to use PIPELINE_AI_PROVIDER=openai"
+            ) from exc
+
+        self.client = OpenAI(api_key=api_key, base_url=self.base_url)
 
     def generate_changes(self, spec: FeatureSpec, plan: PlanArtifact) -> GeneratedChangeSet:
         prompt = build_generation_prompt(spec, plan)
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": "You produce JSON-only code generation plans."},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": 0,
-            "response_format": {"type": "json_object"},
-        }
-        request = urllib.request.Request(
-            f"{self.base_url}/chat/completions",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:  # nosec B310
-                data = json.loads(response.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-            raise PipelineError(f"OpenAI-compatible generation failed: {exc}") from exc
+            request_payload: dict[str, Any] = {
+                "model": self.model,
+                "instructions": (
+                    "You generate small Python code changes for a governed development "
+                    "pipeline. Return only data that matches the supplied JSON schema. "
+                    "Do not include files outside the approved plan."
+                ),
+                "input": prompt,
+                "reasoning": {"effort": self.reasoning_effort},
+                "text": {
+                    "format": {
+                        "type": "json_schema",
+                        "name": "generated_change_set",
+                        "strict": True,
+                        "schema": _generated_change_set_schema(),
+                    }
+                },
+                "store": False,
+            }
+            create_response = cast(Any, self.client.responses.create)
+            response = create_response(**request_payload)
+        except Exception as exc:  # noqa: BLE001 - convert SDK failures to pipeline errors
+            raise PipelineError(f"OpenAI Responses generation failed: {exc}") from exc
 
-        content = data["choices"][0]["message"]["content"]
+        content = _response_output_text(response)
         try:
             parsed = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise PipelineError("OpenAI-compatible provider returned non-JSON content") from exc
+            raise PipelineError("OpenAI Responses provider returned non-JSON content") from exc
+
+        self.last_interaction_metadata = {
+            "request": {
+                "endpoint": "responses.create",
+                "model": self.model,
+                "reasoning_effort": self.reasoning_effort,
+                "text_format": "json_schema",
+                "store": False,
+            },
+            "response": {
+                "id": getattr(response, "id", None),
+                "status": getattr(response, "status", None),
+                "usage": _safe_model_dump(getattr(response, "usage", None)),
+            },
+        }
 
         return GeneratedChangeSet.model_validate(
             {
@@ -128,6 +167,55 @@ class OpenAICompatibleProvider:
                 "files": parsed.get("files", []),
             }
         )
+
+
+def _generated_change_set_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["summary", "files"],
+        "properties": {
+            "summary": {"type": "array", "items": {"type": "string"}},
+            "files": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["path", "purpose", "content", "acceptance_criteria"],
+                    "properties": {
+                        "path": {"type": "string"},
+                        "purpose": {"type": "string"},
+                        "content": {"type": "string"},
+                        "acceptance_criteria": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                    },
+                },
+            },
+        },
+    }
+
+
+def _response_output_text(response: Any) -> str:
+    output_text = getattr(response, "output_text", "")
+    if output_text:
+        return str(output_text)
+    if isinstance(response, dict):
+        output_text = response.get("output_text", "")
+        if output_text:
+            return str(output_text)
+    raise PipelineError("OpenAI Responses provider returned no output text")
+
+
+def _safe_model_dump(value: Any) -> Any:
+    if value is None:
+        return None
+    if hasattr(value, "model_dump"):
+        return value.model_dump(mode="json")
+    if isinstance(value, dict):
+        return value
+    return str(value)
 
 
 def _discount_calculator_files(spec: FeatureSpec, plan: PlanArtifact) -> list[GeneratedFile]:

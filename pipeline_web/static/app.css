@@ -24,7 +24,7 @@ div[id] {
 .create-run-control {
   display: flex;
   gap: 0.5rem;
-  align-items: stretch;
+  align-items: end;
 }
 
 .create-run-control .form-control,
@@ -35,6 +35,29 @@ div[id] {
 .create-run-control .btn {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+.create-run-submit {
+  flex: 0 0 auto;
+}
+
+.provider-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.provider-status span {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  background: var(--bs-white);
+  color: var(--bs-secondary-color);
+  font-size: 0.9rem;
+}
+
+.spec-source-switch {
+  flex-wrap: wrap;
 }
 
 .create-run-help {
@@ -188,6 +211,10 @@ code {
   }
 
   .create-run-control .btn {
+    width: 100%;
+  }
+
+  .create-run-submit {
     width: 100%;
   }
 

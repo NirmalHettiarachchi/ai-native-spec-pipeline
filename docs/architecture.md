@@ -21,6 +21,8 @@ The implementation keeps AI output bounded by deterministic controls:
 - acceptance tests must trace back to every acceptance criterion ID
 - approvals bind to artefact hashes
 - audit records capture prompts, provider metadata, outputs, and gate results
+- `auto` provider mode uses OpenAI when credentials are configured and otherwise falls back to deterministic local generation
+- OpenAI-backed generation uses Responses API structured output and records sanitized metadata without API keys
 
 ## Source-Control Practice
 

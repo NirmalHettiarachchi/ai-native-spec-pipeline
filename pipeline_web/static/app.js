@@ -64,6 +64,35 @@ document.querySelectorAll("form").forEach((form) => {
   });
 });
 
+document.querySelectorAll("[data-spec-source-form]").forEach((form) => {
+  const choices = form.querySelectorAll("[data-spec-source-choice]");
+  const panels = form.querySelectorAll("[data-spec-source-panel]");
+
+  function syncSpecSource() {
+    const selected = form.querySelector("[data-spec-source-choice]:checked");
+    const selectedSource = selected ? selected.value : "repository";
+
+    panels.forEach((panel) => {
+      const isActive = panel.dataset.specSourcePanel === selectedSource;
+      panel.hidden = !isActive;
+      panel.querySelectorAll("input, select").forEach((control) => {
+        control.disabled = !isActive;
+        if (control instanceof HTMLInputElement && control.type === "file") {
+          control.required = isActive;
+        }
+        if (control instanceof HTMLSelectElement) {
+          control.required = isActive;
+        }
+      });
+    });
+  }
+
+  choices.forEach((choice) => {
+    choice.addEventListener("change", syncSpecSource);
+  });
+  syncSpecSource();
+});
+
 window.addEventListener("pageshow", () => {
   setLoading(false);
 });

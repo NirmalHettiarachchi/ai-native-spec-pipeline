@@ -8,7 +8,11 @@ The workflow borrows from GitHub Spec Kit concepts: specification as the source 
 
 ```powershell
 python -m pip install -e ".[dev]"
+Copy-Item .env.example .env
 ```
+
+Edit `.env` if you want live OpenAI-backed generation. The default `auto` mode uses OpenAI
+when `OPENAI_API_KEY` is configured and falls back to deterministic local generation when it is not.
 
 ## Local Governance UI
 
@@ -22,7 +26,8 @@ Open `http://127.0.0.1:8000`. The UI reads and writes the same audit artefacts a
 
 The dashboard supports:
 
-- creating a run from a known spec, or uploading `.yaml`, `.yml`, `.json`, `.md`, or `.markdown`
+- creating a run from either a known repository spec or an uploaded `.yaml`, `.yml`, `.json`, `.md`, or `.markdown` spec
+- viewing sanitized AI provider readiness, including mode, resolved provider, model, and credential presence
 - paging recent runs with `?page=<n>&page_size=<n>`; the default page size is 10
 - reviewing the normalized spec, plan, AI interactions, generated change manifest, validation gates, approvals, and evidence
 - approving the plan before implementation
@@ -32,6 +37,13 @@ The dashboard supports:
 - generating deployment evidence after release approval
 
 Uploaded specs are saved under `specs/uploads/` and ignored by Git except for the directory marker.
+
+Lightweight JSON endpoints are also available for assessment review:
+
+- `GET /api/health`
+- `GET /api/config`
+- `GET /api/runs`
+- `GET /api/runs/{run-id}`
 
 ## Input Contract
 
@@ -70,21 +82,30 @@ python -m pipeline run specs/examples/discount_calculator.yaml --run-id <run-id>
 
 ## AI Provider
 
-The default provider is deterministic and local:
+The default provider mode is `auto`:
+
+```powershell
+$env:PIPELINE_AI_PROVIDER = "auto"
+```
+
+In `auto` mode, the pipeline uses OpenAI when `OPENAI_API_KEY` is configured and otherwise
+uses the deterministic local template provider. Explicit modes are also supported:
+
+```powershell
+$env:PIPELINE_AI_PROVIDER = "openai"
+$env:OPENAI_API_KEY = "<key>"
+$env:OPENAI_MODEL = "gpt-5.5"
+$env:OPENAI_REASONING_EFFORT = "medium"
+```
 
 ```powershell
 $env:PIPELINE_AI_PROVIDER = "local"
 ```
 
-An optional OpenAI-compatible adapter is available:
-
-```powershell
-$env:PIPELINE_AI_PROVIDER = "openai"
-$env:OPENAI_API_KEY = "<key>"
-$env:OPENAI_MODEL = "gpt-4.1-mini"
-```
-
-All provider interactions are captured in `audit/runs/<run-id>/ai_interactions.jsonl`.
+The OpenAI provider uses the Responses API with Structured Outputs. All provider interactions
+are captured in `audit/runs/<run-id>/ai_interactions.jsonl` with sanitized request metadata,
+response IDs, usage, prompts, and generated outputs. API keys are never written to audit files
+or the dashboard.
 
 ## Quality Gates
 

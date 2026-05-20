@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
-from pipeline.ai import build_generation_prompt, get_ai_provider
+from pipeline.ai import build_generation_prompt, get_ai_provider, get_provider_audit_metadata
 from pipeline.approval import require_approval
 from pipeline.audit import (
     append_jsonl,
@@ -42,6 +42,7 @@ def implement_run(run_id: str, repo_root: Path | None = None) -> ChangeManifest:
             "model": change_set.model,
             "prompt": prompt,
             "response": change_set.to_json_data(),
+            "metadata": get_provider_audit_metadata(provider),
         },
     )
 
@@ -94,4 +95,3 @@ def _write_summary(path: Path, manifest: ChangeManifest) -> None:
         lines.append(f"- `{file_entry.path}`: {file_entry.purpose} Acceptance criteria: {ac}.")
     lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
-
