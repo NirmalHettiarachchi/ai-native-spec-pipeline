@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -89,3 +89,48 @@ class FeatureSpec(BaseModel):
     def to_json_data(self) -> dict[str, Any]:
         return self.model_dump(mode="json")
 
+
+class ImplementationTask(BaseModel):
+    """Task generated from a validated feature specification."""
+
+    id: str
+    title: str
+    description: str
+    acceptance_criteria: list[str] = Field(default_factory=list)
+
+
+class PlanArtifact(BaseModel):
+    """Technical plan derived from the normalized specification."""
+
+    run_id: str
+    spec_hash: str
+    spec_version: str
+    spec_slug: str
+    target_module: str
+    target_function: str
+    technical_design_summary: str
+    implementation_tasks: list[ImplementationTask]
+    impacted_modules_files: list[str]
+    risk_considerations: list[str]
+    test_strategy: list[str]
+    allowed_paths: list[str]
+    created_at: str
+
+    def to_json_data(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+
+class ApprovalRecord(BaseModel):
+    """Human approval record bound to a specific artefact hash."""
+
+    run_id: str
+    stage: Literal["plan", "release"]
+    approver: str
+    artifact_path: str
+    artifact_hash: str
+    approved_at: str
+    decision: Literal["approved"] = "approved"
+    signature: str
+
+    def to_json_data(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
