@@ -97,7 +97,7 @@
           <tr>
             <td>{{ file.path }}</td>
             <td>{{ file.purpose }}</td>
-            <td>{{ ", ".join(file.acceptance_criteria) if file.acceptance_criteria else "N/A" }}</td>
+            <td>{{ file.acceptance_criteria|join(", ") if file.acceptance_criteria else "N/A" }}</td>
             <td><code>{{ file.content_sha256 }}</code></td>
           </tr>
         {% else %}
@@ -156,4 +156,3 @@
   {% endfor %}
 </section>
 {% endblock %}
-

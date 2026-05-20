@@ -10,6 +10,26 @@ The workflow borrows from GitHub Spec Kit concepts: specification as the source 
 python -m pip install -e ".[dev]"
 ```
 
+## Local Governance UI
+
+Start the local dashboard:
+
+```powershell
+python -m pipeline_web
+```
+
+Open `http://127.0.0.1:8000`. The UI reads and writes the same audit artefacts as the CLI, so both interfaces remain interoperable.
+
+The dashboard supports:
+
+- creating a run from a spec path
+- reviewing the normalized spec, plan, AI interactions, generated change manifest, validation gates, approvals, and evidence
+- approving the plan before implementation
+- generating implementation and tests
+- running validation gates
+- approving release only after validation passes
+- generating deployment evidence after release approval
+
 ## Input Contract
 
 Specs can be Markdown, YAML, or JSON. The normalized schema requires:

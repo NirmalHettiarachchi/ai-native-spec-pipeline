@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlencode
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -159,10 +160,8 @@ async def _read_form(request: Request) -> dict[str, str]:
     return {key: values[-1] for key, values in parse_qs(body, keep_blank_values=True).items()}
 
 
-def _run_action(run_id: str, action: object, success: str) -> RedirectResponse:
+def _run_action(run_id: str, action: Callable[[], object], success: str) -> RedirectResponse:
     try:
-        if not callable(action):
-            raise PipelineError("invalid UI action")
         action()
     except PipelineError as exc:
         return _redirect(f"/runs/{run_id}", error=str(exc))
@@ -170,11 +169,10 @@ def _run_action(run_id: str, action: object, success: str) -> RedirectResponse:
 
 
 def _redirect(path: str, *, message: str = "", error: str = "") -> RedirectResponse:
-    params = []
+    params: dict[str, str] = {}
     if message:
-        params.append(f"message={message}")
+        params["message"] = message
     if error:
-        params.append(f"error={error}")
-    suffix = f"?{'&'.join(params)}" if params else ""
+        params["error"] = error
+    suffix = f"?{urlencode(params)}" if params else ""
     return RedirectResponse(f"{path}{suffix}", status_code=303)
-
