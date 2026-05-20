@@ -9,10 +9,13 @@ from pathlib import Path
 
 from pipeline.audit import initialize_run
 from pipeline.approval import create_approval
+from pipeline.evidence import create_deployment_evidence
 from pipeline.errors import PipelineError
 from pipeline.generator import implement_run
+from pipeline.gates import validate_run
 from pipeline.planner import create_plan, write_plan
 from pipeline.spec_parser import parse_feature_spec
+from pipeline.workflow import run_pipeline
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -39,6 +42,19 @@ def build_parser() -> argparse.ArgumentParser:
     implement = subparsers.add_parser("implement", help="Generate bounded code and tests.")
     implement.add_argument("run_id")
     implement.set_defaults(func=_cmd_implement)
+
+    validate = subparsers.add_parser("validate", help="Run deterministic quality gates.")
+    validate.add_argument("run_id")
+    validate.set_defaults(func=_cmd_validate)
+
+    evidence = subparsers.add_parser("evidence", help="Write deployment evidence after release approval.")
+    evidence.add_argument("run_id")
+    evidence.set_defaults(func=_cmd_evidence)
+
+    run = subparsers.add_parser("run", help="Run or resume the full pipeline with approval pauses.")
+    run.add_argument("spec_file", type=Path)
+    run.add_argument("--run-id")
+    run.set_defaults(func=_cmd_run)
 
     return parser
 
@@ -83,4 +99,24 @@ def _cmd_implement(args: argparse.Namespace) -> int:
     print(f"generated changes for run: {manifest.run_id}")
     for file_entry in manifest.files:
         print(f"- {file_entry.path}")
+    return 0
+
+
+def _cmd_validate(args: argparse.Namespace) -> int:
+    results = validate_run(args.run_id)
+    print(f"validation: {results.overall_status}")
+    for gate in results.gates:
+        print(f"- {gate.name}: {gate.status}")
+    return 0 if results.overall_status == "passed" else 1
+
+
+def _cmd_evidence(args: argparse.Namespace) -> int:
+    evidence_path = create_deployment_evidence(args.run_id)
+    print(f"deployment evidence: {evidence_path}")
+    return 0
+
+
+def _cmd_run(args: argparse.Namespace) -> int:
+    for message in run_pipeline(args.spec_file, args.run_id):
+        print(message)
     return 0

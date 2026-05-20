@@ -181,3 +181,29 @@ class ChangeManifest(BaseModel):
 
     def to_json_data(self) -> dict[str, Any]:
         return self.model_dump(mode="json")
+
+
+class GateResult(BaseModel):
+    """Result from one deterministic quality gate."""
+
+    name: str
+    status: Literal["passed", "failed"]
+    command: list[str] = Field(default_factory=list)
+    return_code: int | None = None
+    stdout: str = ""
+    stderr: str = ""
+    details: list[str] = Field(default_factory=list)
+    started_at: str
+    finished_at: str
+
+
+class ValidationResults(BaseModel):
+    """Aggregated validation status for a pipeline run."""
+
+    run_id: str
+    overall_status: Literal["passed", "failed"]
+    created_at: str
+    gates: list[GateResult]
+
+    def to_json_data(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")

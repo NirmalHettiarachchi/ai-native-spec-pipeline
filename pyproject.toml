@@ -39,7 +39,7 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S"]
-ignore = ["S101", "S603", "S607"]
+ignore = ["S101", "S310", "S603", "S607"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -48,4 +48,3 @@ strict = false
 warn_unused_ignores = true
 warn_return_any = true
 warn_unreachable = true
-

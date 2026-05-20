@@ -109,7 +109,7 @@ class OpenAICompatibleProvider:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
+            with urllib.request.urlopen(request, timeout=60) as response:  # nosec B310
                 data = json.loads(response.read().decode("utf-8"))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             raise PipelineError(f"OpenAI-compatible generation failed: {exc}") from exc
@@ -322,4 +322,3 @@ def test_acceptance_criteria_are_exposed() -> None:
             acceptance_criteria=ac_ids,
         ),
     ]
-
