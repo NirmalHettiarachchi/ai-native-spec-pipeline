@@ -1,0 +1,33 @@
+schema_version: "1.0"
+feature_id: discount-calculator
+feature_name: Discount Calculator
+feature_objective: >
+  Provide a deterministic discount calculation capability for checkout-style
+  workflows in the demo application.
+user_story: >
+  As a sales operations user, I want to calculate discounted prices from a
+  base price and a percentage discount so that quotes are consistent and easy
+  to audit.
+business_rules:
+  - The base price must be greater than or equal to zero.
+  - The discount percentage must be between 0 and 100 inclusive.
+  - The final price is rounded to two decimal places.
+  - Invalid input must produce a clear validation error.
+acceptance_criteria:
+  - id: AC-001
+    description: Calculate the discounted price for a valid base price and percentage.
+  - id: AC-002
+    description: Reject a negative base price.
+  - id: AC-003
+    description: Reject a discount percentage below 0 or above 100.
+  - id: AC-004
+    description: Round the final discounted price to two decimal places.
+non_functional_requirements:
+  - The calculation must be deterministic and must not perform network or file I/O.
+  - The implementation must be small enough to review manually.
+  - Generated tests must trace to acceptance criterion IDs.
+out_of_scope:
+  - Tax calculation.
+  - Multi-currency conversion.
+  - Persistent quote storage.
+
