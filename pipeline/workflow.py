@@ -39,6 +39,10 @@ def run_pipeline(spec_file: Path, run_id: str | None = None) -> list[str]:
         manifest = implement_run(run_id)
         messages.append(f"generated {len(manifest.files)} file(s)")
 
+    if (run_dir / "approval.release.json").exists():
+        evidence_path = create_deployment_evidence(run_id)
+        return [*messages, f"deployment evidence: {evidence_path}"]
+
     validation = validate_run(run_id)
     messages.append(f"validation: {validation.overall_status}")
     if validation.overall_status != "passed":
