@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spec Pipeline Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">Spec Pipeline</a>
+      <span class="subtitle">Governed AI-assisted development runs</span>
+    </header>
+    <main class="page">
+      {% if message %}
+        <div class="notice success">{{ message }}</div>
+      {% endif %}
+      {% if error %}
+        <div class="notice error">{{ error }}</div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
+

@@ -1,0 +1,159 @@
+{% extends "layout.html" %}
+
+{% block content %}
+{% set state = detail.state %}
+{% set spec = detail.spec %}
+{% set manifest = detail.manifest %}
+{% set validation = detail.validation %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h1>{{ state.feature }}</h1>
+      <p>{{ state.run_id }}</p>
+    </div>
+    <a class="button ghost" href="/">Back to runs</a>
+  </div>
+  <div class="summary-grid">
+    <div><span>Stage</span><strong>{{ state.stage }}</strong></div>
+    <div><span>Next Action</span><strong>{{ state.next_action }}</strong></div>
+    <div><span>Validation</span><strong>{{ state.validation_status }}</strong></div>
+    <div><span>Spec</span><strong>{{ state.spec_file }}</strong></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Actions</h2>
+  <div class="actions">
+    <form method="post" action="/runs/{{ state.run_id }}/approve-plan">
+      <input name="approver" placeholder="Approver name" required>
+      <button type="submit" {% if state.plan_approved or not state.has_plan %}disabled{% endif %}>
+        Approve Plan
+      </button>
+    </form>
+    <form method="post" action="/runs/{{ state.run_id }}/implement">
+      <button type="submit" {% if not state.plan_approved or state.has_changes %}disabled{% endif %}>
+        Generate Implementation
+      </button>
+    </form>
+    <form method="post" action="/runs/{{ state.run_id }}/validate">
+      <button type="submit" {% if not state.has_changes %}disabled{% endif %}>Run Validation</button>
+    </form>
+    <form method="post" action="/runs/{{ state.run_id }}/approve-release">
+      <input name="approver" placeholder="Approver name" required>
+      <button type="submit" {% if state.release_approved or state.validation_status != "passed" %}disabled{% endif %}>
+        Approve Release
+      </button>
+    </form>
+    <form method="post" action="/runs/{{ state.run_id }}/evidence">
+      <button type="submit" {% if not state.release_approved or state.has_evidence %}disabled{% endif %}>
+        Generate Evidence
+      </button>
+    </form>
+  </div>
+</section>
+
+<section class="grid two">
+  <div class="panel">
+    <h2>Spec Summary</h2>
+    <dl>
+      <dt>Objective</dt>
+      <dd>{{ spec.feature_objective or "Not available" }}</dd>
+      <dt>User Story</dt>
+      <dd>{{ spec.user_story or "Not available" }}</dd>
+    </dl>
+    <h3>Acceptance Criteria</h3>
+    <ul class="compact">
+      {% for criterion in spec.acceptance_criteria or [] %}
+        <li><strong>{{ criterion.id }}</strong> {{ criterion.description }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="panel">
+    <h2>Artefacts</h2>
+    <ul class="compact">
+      {% for artefact in detail.artefacts %}
+        <li><a href="/runs/{{ state.run_id }}/artefacts/{{ artefact }}">{{ artefact }}</a></li>
+      {% else %}
+        <li>No artefacts found.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Generated Changes</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Path</th>
+          <th>Purpose</th>
+          <th>Acceptance Criteria</th>
+          <th>Hash</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for file in manifest.files or [] %}
+          <tr>
+            <td>{{ file.path }}</td>
+            <td>{{ file.purpose }}</td>
+            <td>{{ ", ".join(file.acceptance_criteria) if file.acceptance_criteria else "N/A" }}</td>
+            <td><code>{{ file.content_sha256 }}</code></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty">Implementation has not been generated.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Validation Gates</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Gate</th>
+          <th>Status</th>
+          <th>Command</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for gate in validation.gates or [] %}
+          <tr>
+            <td>{{ gate.name }}</td>
+            <td><span class="status {{ gate.status }}">{{ gate.status }}</span></td>
+            <td><code>{{ " ".join(gate.command) if gate.command else "policy" }}</code></td>
+            <td>
+              <details>
+                <summary>Output</summary>
+                <pre>{{ gate.stdout }}{{ gate.stderr }}{{ "\n".join(gate.details) }}</pre>
+              </details>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty">Validation has not run.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>AI Interactions</h2>
+  {% for interaction in detail.ai_interactions %}
+    <details class="interaction">
+      <summary>{{ interaction.provider }} / {{ interaction.model }}</summary>
+      <h3>Prompt</h3>
+      <pre>{{ interaction.prompt }}</pre>
+      <h3>Response Summary</h3>
+      <pre>{{ interaction.response.summary }}</pre>
+    </details>
+  {% else %}
+    <p class="empty">No AI interactions captured yet.</p>
+  {% endfor %}
+</section>
+{% endblock %}
+

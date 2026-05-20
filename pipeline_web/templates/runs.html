@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h1>Pipeline Runs</h1>
+      <p>Create a run from a feature spec, then approve and execute each governed stage.</p>
+    </div>
+  </div>
+  <form class="inline-form" method="post" action="/runs">
+    <label for="spec_file">Spec path</label>
+    <input id="spec_file" name="spec_file" value="{{ default_spec }}" required>
+    <button type="submit">Create Run</button>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Run</th>
+          <th>Feature</th>
+          <th>Stage</th>
+          <th>Validation</th>
+          <th>Approvals</th>
+          <th>Next Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+          <tr>
+            <td><a href="/runs/{{ run.run_id }}">{{ run.run_id }}</a></td>
+            <td>{{ run.feature }}</td>
+            <td><span class="badge">{{ run.stage }}</span></td>
+            <td><span class="status {{ run.validation_status }}">{{ run.validation_status }}</span></td>
+            <td>
+              Plan: {{ "yes" if run.plan_approved else "no" }}<br>
+              Release: {{ "yes" if run.release_approved else "no" }}
+            </td>
+            <td>{{ run.next_action }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="empty">No audit runs found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+

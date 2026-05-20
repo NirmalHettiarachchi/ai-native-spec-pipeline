@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <h1>{{ name }}</h1>
+      <p>{{ run_id }}</p>
+    </div>
+    <a class="button ghost" href="/runs/{{ run_id }}">Back to run</a>
+  </div>
+  <pre class="artefact">{{ content }}</pre>
+</section>
+{% endblock %}
+
