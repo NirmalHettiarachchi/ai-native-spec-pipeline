@@ -10,6 +10,7 @@ from pathlib import Path
 from pipeline.audit import initialize_run
 from pipeline.approval import create_approval
 from pipeline.errors import PipelineError
+from pipeline.generator import implement_run
 from pipeline.planner import create_plan, write_plan
 from pipeline.spec_parser import parse_feature_spec
 
@@ -34,6 +35,10 @@ def build_parser() -> argparse.ArgumentParser:
     approve.add_argument("--stage", choices=["plan", "release"], required=True)
     approve.add_argument("--approver", required=True)
     approve.set_defaults(func=_cmd_approve)
+
+    implement = subparsers.add_parser("implement", help="Generate bounded code and tests.")
+    implement.add_argument("run_id")
+    implement.set_defaults(func=_cmd_implement)
 
     return parser
 
@@ -70,4 +75,12 @@ def _cmd_approve(args: argparse.Namespace) -> int:
     approval = create_approval(args.run_id, args.stage, args.approver)
     print(f"approved {approval.stage} for run: {approval.run_id}")
     print(f"approval hash: {approval.signature}")
+    return 0
+
+
+def _cmd_implement(args: argparse.Namespace) -> int:
+    manifest = implement_run(args.run_id)
+    print(f"generated changes for run: {manifest.run_id}")
+    for file_entry in manifest.files:
+        print(f"- {file_entry.path}")
     return 0

@@ -134,3 +134,50 @@ class ApprovalRecord(BaseModel):
 
     def to_json_data(self) -> dict[str, Any]:
         return self.model_dump(mode="json")
+
+
+class GeneratedFile(BaseModel):
+    """Generated file content proposed by an AI provider."""
+
+    path: str
+    purpose: str
+    content: str
+    acceptance_criteria: list[str] = Field(default_factory=list)
+
+
+class GeneratedChangeSet(BaseModel):
+    """Provider output before deterministic policy enforcement writes files."""
+
+    provider: str
+    model: str
+    summary: list[str]
+    files: list[GeneratedFile]
+
+    def to_json_data(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+
+class ChangeManifestEntry(BaseModel):
+    """Manifest entry for one generated file."""
+
+    path: str
+    purpose: str
+    content_sha256: str
+    acceptance_criteria: list[str] = Field(default_factory=list)
+
+
+class ChangeManifest(BaseModel):
+    """Bounded generated-change manifest written before file mutation."""
+
+    run_id: str
+    provider: str
+    model: str
+    generated_at: str
+    plan_hash: str
+    spec_hash: str
+    allowed_paths: list[str]
+    summary: list[str]
+    files: list[ChangeManifestEntry]
+
+    def to_json_data(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")

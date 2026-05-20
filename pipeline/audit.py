@@ -47,6 +47,12 @@ def write_json(path: Path, data: Any) -> None:
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def append_jsonl(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(data, sort_keys=True) + "\n")
+
+
 def read_json(path: Path) -> Any:
     if not path.exists():
         raise PipelineError(f"required audit artefact is missing: {path}")
@@ -82,4 +88,3 @@ def initialize_run(spec: FeatureSpec, spec_file: Path, audit_root: Path = AUDIT_
         },
     )
     return run_id, run_dir, spec_hash
-
