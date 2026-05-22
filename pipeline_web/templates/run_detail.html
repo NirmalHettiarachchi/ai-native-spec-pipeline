@@ -14,7 +14,10 @@
         <p class="text-secondary text-break mb-0">{{ state.run_id }}</p>
       </div>
       <div>
-        <a class="btn btn-outline-primary" href="/">Back to runs</a>
+        <a class="btn btn-outline-primary" href="/">
+          <i class="icon" data-lucide="arrow-left"></i>
+          Back
+        </a>
       </div>
     </div>
     <div class="provider-status mb-4" aria-label="AI provider status">
@@ -26,39 +29,27 @@
         {{ "configured" if runtime_config.openai_api_key_configured else "not configured" }}
       </span>
     </div>
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3">
-      <div class="col">
-        <div class="card h-100 bg-light border-0">
-          <div class="card-body">
-            <div class="small text-secondary fw-bold">Stage</div>
-            <div class="fw-semibold text-break">{{ state.stage }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 bg-light border-0">
-          <div class="card-body">
-            <div class="small text-secondary fw-bold">Next Action</div>
-            <div class="fw-semibold text-break">{{ state.next_action }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 bg-light border-0">
-          <div class="card-body">
-            <div class="small text-secondary fw-bold">Validation</div>
-            <div class="fw-semibold text-break">{{ state.validation_status }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 bg-light border-0">
-          <div class="card-body">
-            <div class="small text-secondary fw-bold">Spec</div>
-            <div class="fw-semibold text-break">{{ state.spec_file }}</div>
-          </div>
-        </div>
-      </div>
+    <div class="run-meta-strip">
+      <span>
+        <i class="icon" data-lucide="git-branch"></i>
+        <strong>Stage</strong>
+        {{ state.stage }}
+      </span>
+      <span>
+        <i class="icon" data-lucide="target"></i>
+        <strong>Next</strong>
+        {{ state.next_action }}
+      </span>
+      <span>
+        <i class="icon" data-lucide="shield-check"></i>
+        <strong>Validation</strong>
+        {{ state.validation_status }}
+      </span>
+      <span>
+        <i class="icon" data-lucide="file-code-2"></i>
+        <strong>Spec</strong>
+        {{ state.spec_file }}
+      </span>
     </div>
   </div>
 </section>
@@ -70,13 +61,24 @@
       {% for item in detail.coverage %}
         {% set badge_class = 'text-bg-success' if item.status == 'complete' else 'text-bg-warning' if item.status == 'partial' else 'text-bg-danger' if item.status == 'attention' else 'text-bg-light text-secondary' %}
         <div class="col">
-          <article class="card h-100 border coverage-card">
+          <article
+            class="card h-100 border coverage-card"
+            aria-label="{{ item.label }}: {{ item.status }}. {{ item.detail }}"
+            title="{{ item.detail }}"
+          >
             <div class="card-body">
-              <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
-                <h3 class="h6 mb-0">{{ item.label }}</h3>
+              <div class="d-flex justify-content-between gap-2 align-items-start">
+                <div class="coverage-title">
+                  <span class="coverage-icon {{ item.status }}">
+                    <i
+                      class="icon"
+                      data-lucide="{{ 'check' if item.status == 'complete' else 'alert-triangle' if item.status == 'attention' else 'clock-3' }}"
+                    ></i>
+                  </span>
+                  <h3 class="h6 mb-0">{{ item.label }}</h3>
+                </div>
                 <span class="badge rounded-pill {{ badge_class }}">{{ item.status }}</span>
               </div>
-              <p class="small text-secondary mb-0">{{ item.detail }}</p>
             </div>
           </article>
         </div>
@@ -89,43 +91,42 @@
   <div class="d-flex flex-column flex-lg-row justify-content-between gap-2 mb-3">
     <div>
       <h2 class="h5 mb-1">Pipeline</h2>
-      <p class="text-secondary mb-0">Stage status follows the same gates used for release approval.</p>
     </div>
     <span class="pipeline-ref text-break">{{ state.run_id }}</span>
   </div>
   <ol class="list-unstyled pipeline-track workflow-stepper mb-0">
     <li class="pipeline-stage {{ 'done' if state.has_plan else 'current' }}">
-      <span class="pipeline-node">1</span>
+      <span class="pipeline-node"><i class="icon" data-lucide="clipboard-list"></i></span>
       <strong>Plan</strong>
       <small>{{ 'passed' if state.has_plan else 'running' }}</small>
     </li>
     <li class="pipeline-stage {{ 'done' if state.plan_approved else 'current' if state.has_plan else 'blocked' }}">
-      <span class="pipeline-node">2</span>
+      <span class="pipeline-node"><i class="icon" data-lucide="user-check"></i></span>
       <strong>Approve</strong>
       <small>{{ 'passed' if state.plan_approved else 'manual' if state.has_plan else 'blocked' }}</small>
     </li>
     <li class="pipeline-stage {{ 'done' if state.has_changes else 'current' if state.plan_approved else 'blocked' }}">
-      <span class="pipeline-node">3</span>
+      <span class="pipeline-node"><i class="icon" data-lucide="package"></i></span>
       <strong>Build</strong>
       <small>{{ 'passed' if state.has_changes else 'manual' if state.plan_approved else 'blocked' }}</small>
     </li>
     <li class="pipeline-stage {{ 'done' if state.validation_status == 'passed' else 'failed' if state.validation_status == 'failed' else 'current' if state.has_changes else 'blocked' }}">
-      <span class="pipeline-node">4</span>
+      <span class="pipeline-node"><i class="icon" data-lucide="shield-check"></i></span>
       <strong>Validate</strong>
       <small>{{ state.validation_status }}</small>
     </li>
     <li class="pipeline-stage {{ 'done' if state.validation_status == 'passed' else 'current' if state.validation_status == 'failed' else 'blocked' }}">
-      <span class="pipeline-node">5</span>
+      <span class="pipeline-node"><i class="icon" data-lucide="wrench"></i></span>
       <strong>Repair</strong>
       <small>{{ 'available' if state.validation_status == 'failed' else 'skipped' if state.validation_status == 'passed' else 'blocked' }}</small>
     </li>
     <li class="pipeline-stage {{ 'done' if state.release_approved else 'current' if state.validation_status == 'passed' else 'blocked' }}">
-      <span class="pipeline-node">6</span>
+      <span class="pipeline-node"><i class="icon" data-lucide="rocket"></i></span>
       <strong>Release</strong>
       <small>{{ 'passed' if state.release_approved else 'manual' if state.validation_status == 'passed' else 'blocked' }}</small>
     </li>
     <li class="pipeline-stage {{ 'done' if state.has_evidence else 'current' if state.release_approved else 'blocked' }}">
-      <span class="pipeline-node">7</span>
+      <span class="pipeline-node"><i class="icon" data-lucide="file-check-2"></i></span>
       <strong>Evidence</strong>
       <small>{{ 'passed' if state.has_evidence else 'manual' if state.release_approved else 'blocked' }}</small>
     </li>
@@ -136,19 +137,18 @@
   <div class="card-body">
     <div class="mb-3">
       <h2 class="h5 mb-1">Next Actions</h2>
-      <p class="text-secondary mb-0">Complete each available step in order.</p>
     </div>
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 action-grid">
       <div class="col">
         <article class="card h-100 action-card {{ 'complete' if state.plan_approved else '' }}">
           <div class="card-body">
             <div class="d-flex gap-3">
-              <span class="action-index">1</span>
+              <span class="action-index"><i class="icon" data-lucide="user-check"></i></span>
               <div class="min-w-0">
                 <h3 class="h6 mb-1">Approve Plan</h3>
-                <p class="text-secondary mb-3">
-                  Confirm the generated technical plan before code generation.
-                </p>
+                <span class="action-state">
+                  {{ 'Done' if state.plan_approved else 'Blocked' if not state.has_plan else 'Manual' }}
+                </span>
               </div>
             </div>
             <form method="post" action="/runs/{{ state.run_id }}/approve-plan" data-loading-label="Approving plan...">
@@ -172,13 +172,13 @@
               {% if message and action == "approve-plan" %}
                 <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
               {% endif %}
-              <p class="form-text mb-3">
+              <p class="form-text mb-3 action-help">
                 {% if state.plan_approved %}
-                  Plan approval is complete.
+                  Complete.
                 {% elif not state.has_plan %}
-                  A plan must exist before approval.
+                  Waiting for plan.
                 {% else %}
-                  Required before implementation can start.
+                  Required before build.
                 {% endif %}
               </p>
               <button
@@ -187,6 +187,7 @@
                 data-loading-label="Approving plan..."
                 {% if state.plan_approved or not state.has_plan %}disabled{% endif %}
               >
+                <i class="icon" data-lucide="check"></i>
                 Approve Plan
               </button>
             </form>
@@ -198,10 +199,12 @@
         <article class="card h-100 action-card {{ 'complete' if state.has_changes else '' }}">
           <div class="card-body d-flex flex-column">
             <div class="d-flex gap-3">
-              <span class="action-index">2</span>
+              <span class="action-index"><i class="icon" data-lucide="package"></i></span>
               <div class="min-w-0">
                 <h3 class="h6 mb-1">Generate Implementation</h3>
-                <p class="text-secondary mb-3">Create bounded code and tests from the plan.</p>
+                <span class="action-state">
+                  {{ 'Done' if state.has_changes else 'Blocked' if not state.plan_approved else 'Ready' }}
+                </span>
               </div>
             </div>
             {% if error and action == "implement" %}
@@ -210,13 +213,13 @@
             {% if message and action == "implement" %}
               <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
             {% endif %}
-            <p class="form-text mb-3">
+            <p class="form-text mb-3 action-help">
               {% if state.has_changes %}
-                Implementation has already been generated.
+                Generated.
               {% elif not state.plan_approved %}
-                Plan approval is required first.
+                Plan approval required.
               {% else %}
-                Writes are restricted to approved demo app paths.
+                Ready.
               {% endif %}
             </p>
             <form class="mt-auto" method="post" action="/runs/{{ state.run_id }}/implement" data-loading-label="Generating implementation...">
@@ -226,6 +229,7 @@
                 data-loading-label="Generating implementation..."
                 {% if not state.plan_approved or state.has_changes %}disabled{% endif %}
               >
+                <i class="icon" data-lucide="play"></i>
                 Generate Implementation
               </button>
             </form>
@@ -237,10 +241,12 @@
         <article class="card h-100 action-card {{ 'complete' if state.validation_status == 'passed' else 'failed' if state.validation_status == 'failed' else '' }}">
           <div class="card-body d-flex flex-column">
             <div class="d-flex gap-3">
-              <span class="action-index">3</span>
+              <span class="action-index"><i class="icon" data-lucide="shield-check"></i></span>
               <div class="min-w-0">
                 <h3 class="h6 mb-1">Run Validation</h3>
-                <p class="text-secondary mb-3">Run lint, type, test, security, and policy gates.</p>
+                <span class="action-state">
+                  {{ 'Passed' if state.validation_status == 'passed' else 'Blocked' if not state.has_changes else 'Ready' }}
+                </span>
               </div>
             </div>
             {% if error and action == "validate" %}
@@ -249,13 +255,13 @@
             {% if message and action == "validate" %}
               <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
             {% endif %}
-            <p class="form-text mb-3">
+            <p class="form-text mb-3 action-help">
               {% if state.validation_status == "passed" %}
-                Validation is passing. Rerun only if generated files changed.
+                Passing.
               {% elif not state.has_changes %}
-                Generate implementation before validation.
+                Generate first.
               {% else %}
-                Validation must pass before release approval.
+                Required for release.
               {% endif %}
             </p>
             <form class="mt-auto" method="post" action="/runs/{{ state.run_id }}/validate" data-loading-label="Validating...">
@@ -265,6 +271,7 @@
                 data-loading-label="Validating..."
                 {% if not state.has_changes or state.release_approved %}disabled{% endif %}
               >
+                <i class="icon" data-lucide="shield-check"></i>
                 Run Validation
               </button>
             </form>
@@ -276,12 +283,12 @@
         <article class="card h-100 action-card {{ 'complete' if state.validation_status == 'passed' else 'current' if state.validation_status == 'failed' else '' }}">
           <div class="card-body">
             <div class="d-flex gap-3">
-              <span class="action-index">4</span>
+              <span class="action-index"><i class="icon" data-lucide="wrench"></i></span>
               <div class="min-w-0">
                 <h3 class="h6 mb-1">Fix Validation</h3>
-                <p class="text-secondary mb-3">
-                  Apply deterministic Ruff fixes to generated files and rerun gates.
-                </p>
+                <span class="action-state">
+                  {{ 'Needed' if state.validation_status == 'failed' else 'Done' if state.validation_status == 'passed' else 'Blocked' }}
+                </span>
               </div>
             </div>
             {% if error and action == "repair-validation" %}
@@ -290,15 +297,15 @@
             {% if message and action == "repair-validation" %}
               <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
             {% endif %}
-            <p class="form-text mb-3">
+            <p class="form-text mb-3 action-help">
               {% if state.validation_status == "failed" %}
-                Available because validation failed after generation.
+                Available.
               {% elif state.validation_status == "passed" %}
-                No repair needed.
+                Not needed.
               {% elif not state.has_changes %}
-                Generate implementation before repair.
+                Generate first.
               {% else %}
-                Run validation first to capture gate output.
+                Run validation first.
               {% endif %}
             </p>
             <form method="post" action="/runs/{{ state.run_id }}/repair-validation" data-loading-label="Fixing validation...">
@@ -308,6 +315,7 @@
                 data-loading-label="Fixing validation..."
                 {% if state.validation_status != "failed" or state.release_approved %}disabled{% endif %}
               >
+                <i class="icon" data-lucide="wrench"></i>
                 Fix Validation
               </button>
             </form>
@@ -319,10 +327,12 @@
         <article class="card h-100 action-card {{ 'complete' if state.release_approved else '' }}">
           <div class="card-body">
             <div class="d-flex gap-3">
-              <span class="action-index">5</span>
+              <span class="action-index"><i class="icon" data-lucide="rocket"></i></span>
               <div class="min-w-0">
                 <h3 class="h6 mb-1">Approve Release</h3>
-                <p class="text-secondary mb-3">Record the final human checkpoint.</p>
+                <span class="action-state">
+                  {{ 'Done' if state.release_approved else 'Blocked' if state.validation_status != 'passed' else 'Manual' }}
+                </span>
               </div>
             </div>
             <form method="post" action="/runs/{{ state.run_id }}/approve-release" data-loading-label="Approving release...">
@@ -346,13 +356,13 @@
               {% if message and action == "approve-release" %}
                 <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
               {% endif %}
-              <p class="form-text mb-3">
+              <p class="form-text mb-3 action-help">
                 {% if state.release_approved %}
-                  Release approval is complete.
+                  Complete.
                 {% elif state.validation_status != "passed" %}
-                  Passing validation is required first.
+                  Validation required.
                 {% else %}
-                  Approval is bound to the validation artefact hash.
+                  Ready.
                 {% endif %}
               </p>
               <button
@@ -361,6 +371,7 @@
                 data-loading-label="Approving release..."
                 {% if state.release_approved or state.validation_status != "passed" %}disabled{% endif %}
               >
+                <i class="icon" data-lucide="check"></i>
                 Approve Release
               </button>
             </form>
@@ -372,10 +383,12 @@
         <article class="card h-100 action-card {{ 'complete' if state.has_evidence else '' }}">
           <div class="card-body d-flex flex-column">
             <div class="d-flex gap-3">
-              <span class="action-index">6</span>
+              <span class="action-index"><i class="icon" data-lucide="file-check-2"></i></span>
               <div class="min-w-0">
                 <h3 class="h6 mb-1">Generate Evidence</h3>
-                <p class="text-secondary mb-3">Create the deployment evidence packet.</p>
+                <span class="action-state">
+                  {{ 'Done' if state.has_evidence else 'Blocked' if not state.release_approved else 'Ready' }}
+                </span>
               </div>
             </div>
             {% if error and action == "evidence" %}
@@ -384,13 +397,13 @@
             {% if message and action == "evidence" %}
               <div class="alert alert-success py-2 small mb-2">{{ message }}</div>
             {% endif %}
-            <p class="form-text mb-3">
+            <p class="form-text mb-3 action-help">
               {% if state.has_evidence %}
-                Deployment evidence is ready.
+                Ready.
               {% elif not state.release_approved %}
-                Release approval is required first.
+                Release required.
               {% else %}
-                Evidence can now be generated.
+                Ready.
               {% endif %}
             </p>
             <form class="mt-auto" method="post" action="/runs/{{ state.run_id }}/evidence" data-loading-label="Generating evidence...">
@@ -400,6 +413,7 @@
                 data-loading-label="Generating evidence..."
                 {% if not state.release_approved or state.has_evidence %}disabled{% endif %}
               >
+                <i class="icon" data-lucide="file-check-2"></i>
                 Generate Evidence
               </button>
             </form>
@@ -434,11 +448,11 @@
     <section class="card shadow-sm h-100 border-0">
       <div class="card-body">
         <h2 class="h5 mb-2">Artefacts</h2>
-        <p class="text-secondary">Open safe, known audit artefacts produced by this run.</p>
         <ul class="list-group list-group-flush">
           {% for artefact in detail.artefacts %}
             <li class="list-group-item px-0">
               <a class="text-break" href="/runs/{{ state.run_id }}/artefacts/{{ artefact }}">
+                <i class="icon" data-lucide="file-text"></i>
                 {{ artefact }}
               </a>
             </li>

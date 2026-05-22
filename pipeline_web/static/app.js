@@ -18,13 +18,13 @@ function setLoading(isLoading, label = "Working...", submitter = null) {
     }
     document.querySelectorAll("[data-loading-active='true']").forEach((button) => {
       if (button instanceof HTMLButtonElement) {
-        if (button.dataset.originalLabel) {
-          button.textContent = button.dataset.originalLabel;
+        if (button.dataset.originalHtml) {
+          button.innerHTML = button.dataset.originalHtml;
         }
         if (button.dataset.wasDisabled === "false") {
           button.disabled = false;
         }
-        delete button.dataset.originalLabel;
+        delete button.dataset.originalHtml;
         delete button.dataset.wasDisabled;
         delete button.dataset.loadingActive;
       }
@@ -40,7 +40,7 @@ function setLoading(isLoading, label = "Working...", submitter = null) {
     loadingMessage.textContent = label;
   }
   if (submitter instanceof HTMLButtonElement) {
-    submitter.dataset.originalLabel = submitter.textContent.trim();
+    submitter.dataset.originalHtml = submitter.innerHTML;
     submitter.dataset.wasDisabled = submitter.disabled ? "true" : "false";
     submitter.dataset.loadingActive = "true";
     submitter.textContent = submitter.dataset.loadingLabel || label;
@@ -102,3 +102,11 @@ document.addEventListener("visibilitychange", () => {
     setLoading(false);
   }
 });
+
+if (window.lucide) {
+  window.lucide.createIcons({
+    attrs: {
+      "aria-hidden": "true",
+    },
+  });
+}

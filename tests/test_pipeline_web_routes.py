@@ -180,7 +180,9 @@ def test_web_pages_include_mobile_and_loading_affordances(
     assert "Human Approval Workflow" in detail.text
     assert "row-cols-md-2 row-cols-xl-3" in detail.text
     assert "Fix Validation" in detail.text
-    assert "Plan approval is required first." in detail.text
+    assert "Plan approval required." in detail.text
+    assert 'data-lucide="shield-check"' in detail.text
+    assert 'data-lucide="wrench"' in detail.text
     assert 'data-loading-label="Validating..."' in detail.text
     assert 'data-loading-label="Fixing validation..."' in detail.text
     assert 'maxlength="60"' in detail.text
@@ -188,6 +190,7 @@ def test_web_pages_include_mobile_and_loading_affordances(
 
     layout = Path("pipeline_web/templates/layout.html").read_text(encoding="utf-8")
     assert "bootstrap@5.3.3" in layout
+    assert "lucide" in layout
     assert "alert-success" not in layout
     assert "alert-danger" not in layout
     css = Path("pipeline_web/static/app.css").read_text(encoding="utf-8")
@@ -199,6 +202,8 @@ def test_web_pages_include_mobile_and_loading_affordances(
 
     js = Path("pipeline_web/static/app.js").read_text(encoding="utf-8")
     assert "function setLoading" in js
+    assert "originalHtml" in js
+    assert "createIcons" in js
     assert "syncSpecSource" in js
     assert "pageshow" in js
     assert "visibilitychange" in js
