@@ -23,6 +23,7 @@ from pipeline.evidence import create_deployment_evidence
 from pipeline.gates import validate_run
 from pipeline.generator import implement_run
 from pipeline.planner import create_plan, write_plan
+from pipeline.repair import repair_validation
 from pipeline.spec_parser import parse_feature_spec
 from pipeline_web.run_state import list_runs_page, read_allowed_artefact, read_run_detail
 from pipeline_web.spec_catalog import (
@@ -207,6 +208,22 @@ async def validate(run_id: str) -> RedirectResponse:
             raise PipelineError("Validation failed. Review gate output before release approval.")
 
     return _run_action(run_id, action, "Validation passed.", "validate")
+
+
+@app.post("/runs/{run_id}/repair-validation")
+async def repair_validation_action(run_id: str) -> RedirectResponse:
+    def action() -> None:
+        repair_validation(run_id)
+        results = validate_run(run_id)
+        if results.overall_status != "passed":
+            raise PipelineError("Repair completed, but validation still fails. Review gate output.")
+
+    return _run_action(
+        run_id,
+        action,
+        "Validation fixes applied and gates passed.",
+        "repair-validation",
+    )
 
 
 @app.post("/runs/{run_id}/approve-release")

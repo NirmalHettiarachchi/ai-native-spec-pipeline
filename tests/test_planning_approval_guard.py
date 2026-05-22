@@ -57,3 +57,16 @@ def test_change_guard_rejects_files_outside_approved_paths(tmp_path: Path) -> No
 
     with pytest.raises(PipelineError, match="outside approved paths"):
         validate_generated_paths([generated_file], PlanArtifact.model_validate(plan), tmp_path)
+
+
+def test_change_guard_rejects_incomplete_generated_plan(tmp_path: Path) -> None:
+    spec = parse_feature_spec(Path("specs/examples/discount_calculator.yaml"))
+    plan = create_plan(spec, "run-1", "hash")
+    generated_file = GeneratedFile(
+        path="demo_app/src/demo_app/discount_calculator.py",
+        purpose="partial implementation",
+        content="def calculate_discounted_price():\n    return 1\n",
+    )
+
+    with pytest.raises(PipelineError, match="missing approved plan files"):
+        validate_generated_paths([generated_file], plan, tmp_path)

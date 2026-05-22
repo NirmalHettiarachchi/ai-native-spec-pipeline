@@ -179,8 +179,10 @@ def test_web_pages_include_mobile_and_loading_affordances(
     assert "Spec Intake" in detail.text
     assert "Human Approval Workflow" in detail.text
     assert "row-cols-md-2 row-cols-xl-3" in detail.text
+    assert "Fix Validation" in detail.text
     assert "Plan approval is required first." in detail.text
     assert 'data-loading-label="Validating..."' in detail.text
+    assert 'data-loading-label="Fixing validation..."' in detail.text
     assert 'maxlength="60"' in detail.text
     assert 'pattern="[A-Za-z0-9 ._\'\\-]+"' in detail.text
 
@@ -254,17 +256,31 @@ def test_web_routes_can_execute_governed_flow(
         write_json(tmp_path / run_id / "validation_results.json", results.to_json_data())
         return results
 
+    def fake_repair(run_id: str) -> None:
+        write_json(
+            tmp_path / run_id / "validation_repair.json",
+            {
+                "run_id": run_id,
+                "created_at": "2026-05-20T00:00:00Z",
+                "status": "passed",
+                "commands": [],
+                "files": [],
+            },
+        )
+
     def fake_evidence(run_id: str) -> Path:
         path = tmp_path / run_id / "deployment_evidence.md"
         path.write_text("# Evidence\n", encoding="utf-8")
         return path
 
     monkeypatch.setattr("pipeline_web.app.implement_run", fake_implement)
+    monkeypatch.setattr("pipeline_web.app.repair_validation", fake_repair)
     monkeypatch.setattr("pipeline_web.app.validate_run", fake_validate)
     monkeypatch.setattr("pipeline_web.app.create_deployment_evidence", fake_evidence)
 
     assert client.post(f"/runs/{run_id}/implement").status_code == 303
     assert client.post(f"/runs/{run_id}/validate").status_code == 303
+    assert client.post(f"/runs/{run_id}/repair-validation").status_code == 303
     assert client.post(
         f"/runs/{run_id}/approve-release",
         data={"approver": "Reviewer"},

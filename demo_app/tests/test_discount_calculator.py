@@ -1,30 +1,25 @@
 import pytest
-from demo_app.discount_calculator import DiscountValidationError, calculate_discounted_price
 
-import demo_app
-
-
-def test_ac_001_calculates_discounted_price() -> None:
-    """AC-001: valid base price and percentage produce a discounted price."""
-
-    assert calculate_discounted_price(100, 15) == 85.0
+from demo_app import DiscountValidationError, calculate_discounted_price
 
 
-def test_ac_002_rejects_negative_base_price() -> None:
-    """AC-002: negative base prices are rejected."""
-
-    with pytest.raises(DiscountValidationError, match="base price"):
-        calculate_discounted_price(-1, 10)
+def test_calculate_discounted_price_valid():
+    assert calculate_discounted_price(100, 20) == 80.0  # AC-001
+    assert calculate_discounted_price(50, 50) == 25.0  # AC-001
 
 
-def test_ac_003_rejects_invalid_discount_range() -> None:
-    """AC-003: discount percentage must be between 0 and 100."""
-
-    with pytest.raises(DiscountValidationError, match="between 0 and 100"):
-        calculate_discounted_price(100, -0.01)
-    with pytest.raises(DiscountValidationError, match="between 0 and 100"):
-        calculate_discounted_price(100, 100.01)
+def test_calculate_discounted_price_rounding():
+    assert calculate_discounted_price(100, 33.3333) == 66.67  # AC-004
 
 
-def test_integration_package_export() -> None:
-    assert demo_app.calculate_discounted_price(40, 25) == 30.0
+@pytest.mark.parametrize(
+    "base_price,discount_percentage",
+    [
+        (-10, 10),  # AC-002
+        (100, -1),  # AC-003
+        (100, 101),  # AC-003
+    ],
+)
+def test_calculate_discounted_price_invalid(base_price, discount_percentage):
+    with pytest.raises(DiscountValidationError):
+        calculate_discounted_price(base_price, discount_percentage)

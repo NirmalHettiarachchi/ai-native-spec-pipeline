@@ -9,8 +9,9 @@ The pipeline is organized as a deterministic shell around optional AI-assisted g
 3. Plan approval records a human checkpoint before any code generation.
 4. Implementation asks an AI provider abstraction for a change set, then writes only files allowed by the approved plan.
 5. Validation runs lint, type, test, security, and policy gates.
-6. Release approval records a human checkpoint after validation.
-7. Evidence writes a release packet with hashes, approvals, validation results, and Git commit state.
+6. Optional validation repair applies deterministic formatting fixes to generated files, updates their manifest hashes, and reruns validation.
+7. Release approval records a human checkpoint after validation.
+8. Evidence writes a release packet with hashes, approvals, validation results, and Git commit state.
 
 ## Governance Model
 

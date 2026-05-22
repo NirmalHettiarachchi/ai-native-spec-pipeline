@@ -45,18 +45,22 @@ def build_generation_prompt(spec: FeatureSpec, plan: PlanArtifact) -> str:
         f"- {criterion.id}: {criterion.description}" for criterion in spec.acceptance_criteria
     )
     rules = "\n".join(f"- {rule}" for rule in spec.business_rules)
+    impacted_files = "\n".join(f"- {path}" for path in plan.impacted_modules_files)
     return (
         "Generate a bounded Python implementation and pytest coverage for the approved plan.\n"
         "Return JSON only with keys: summary and files. Each file must include path, purpose, "
-        "content, and acceptance_criteria.\n\n"
+        "content, and acceptance_criteria. Return one file entry for every approved impacted "
+        "file, exactly once.\n\n"
         f"Feature: {spec.display_name}\n"
         f"Objective: {spec.feature_objective}\n"
         f"User story: {spec.user_story}\n"
         f"Business rules:\n{rules}\n"
         f"Acceptance criteria:\n{acceptance}\n"
         f"Allowed paths: {', '.join(plan.allowed_paths)}\n"
+        f"Approved impacted files:\n{impacted_files}\n"
         f"Target module: {plan.target_module}\n"
         f"Target function: {plan.target_function}\n"
+        f"Implementation contract:\n{_implementation_contract(plan)}\n"
     )
 
 
@@ -119,7 +123,8 @@ class OpenAIResponsesProvider:
                 "instructions": (
                     "You generate small Python code changes for a governed development "
                     "pipeline. Return only data that matches the supplied JSON schema. "
-                    "Do not include files outside the approved plan."
+                    "Return every approved impacted file exactly once. Do not include files "
+                    "outside the approved plan."
                 ),
                 "input": prompt,
                 "text": {
@@ -380,9 +385,18 @@ def test_ac_004_acceptance_rounding() -> None:
 def _generic_feature_files(spec: FeatureSpec, plan: PlanArtifact) -> list[GeneratedFile]:
     module_path = f"demo_app/src/demo_app/{plan.target_module}.py"
     test_path = f"demo_app/tests/test_{plan.target_module}.py"
+    acceptance_path = f"demo_app/tests/test_{plan.target_module}_acceptance.py"
     ac_map = {criterion.id: criterion.description for criterion in spec.acceptance_criteria}
     ac_literal = json.dumps(ac_map, indent=4, sort_keys=True)
     ac_ids = list(ac_map)
+    coverage_literal = json.dumps(
+        {
+            criterion_id: "test_acceptance_criteria_are_exposed"
+            for criterion_id in ac_ids
+        },
+        indent=4,
+        sort_keys=True,
+    )
     module = f'''"""Generated metadata implementation for {spec.display_name}."""
 
 ACCEPTANCE_CRITERIA = {ac_literal}
@@ -393,6 +407,12 @@ def {plan.target_function}() -> dict[str, object]:
         "feature": {spec.display_name!r},
         "acceptance_criteria": ACCEPTANCE_CRITERIA,
     }}
+'''
+    package_init = f'''"""Demo application package used by the generated implementation."""
+
+from demo_app.{plan.target_module} import {plan.target_function}
+
+__all__ = ["{plan.target_function}"]
 '''
     tests = f'''from demo_app.{plan.target_module} import (
     ACCEPTANCE_CRITERIA,
@@ -409,6 +429,19 @@ def test_acceptance_criteria_are_exposed() -> None:
     result = {plan.target_function}()
     assert result["acceptance_criteria"] == ACCEPTANCE_CRITERIA
 '''
+    acceptance_tests = f'''import pytest
+from demo_app.{plan.target_module} import ACCEPTANCE_CRITERIA, {plan.target_function}
+
+ACCEPTANCE_COVERAGE = {coverage_literal}
+
+
+@pytest.mark.acceptance
+def test_acceptance_criteria_are_exposed() -> None:
+    result = {plan.target_function}()
+
+    assert result["acceptance_criteria"] == ACCEPTANCE_CRITERIA
+    assert set(ACCEPTANCE_COVERAGE) == set(ACCEPTANCE_CRITERIA)
+'''
     return [
         GeneratedFile(
             path=module_path,
@@ -417,9 +450,43 @@ def test_acceptance_criteria_are_exposed() -> None:
             acceptance_criteria=ac_ids,
         ),
         GeneratedFile(
+            path="demo_app/src/demo_app/__init__.py",
+            purpose="Expose generated feature through demo package boundary.",
+            content=package_init,
+            acceptance_criteria=[],
+        ),
+        GeneratedFile(
             path=test_path,
             purpose="Generated traceability test.",
             content=tests,
             acceptance_criteria=ac_ids,
         ),
+        GeneratedFile(
+            path=acceptance_path,
+            purpose="Generated acceptance tests with AC traceability metadata.",
+            content=acceptance_tests,
+            acceptance_criteria=ac_ids,
+        ),
     ]
+
+
+def _implementation_contract(plan: PlanArtifact) -> str:
+    module_path = f"demo_app/src/demo_app/{plan.target_module}.py"
+    package_path = "demo_app/src/demo_app/__init__.py"
+    required_module_symbols = [plan.target_function, "ACCEPTANCE_CRITERIA"]
+    required_package_exports = [plan.target_function]
+    if plan.target_function == "calculate_discounted_price":
+        required_module_symbols.append("DiscountValidationError")
+        required_package_exports.append("DiscountValidationError")
+
+    return "\n".join(
+        [
+            f"- Return `{module_path}` with public symbols: "
+            f"{', '.join(required_module_symbols)}.",
+            f"- Return `{package_path}` importing and exporting: "
+            f"{', '.join(required_package_exports)}.",
+            "- Return acceptance tests that include every AC ID literally for traceability.",
+            "- Generated Python must pass Ruff import sorting and the configured 100 character "
+            "line length.",
+        ]
+    )

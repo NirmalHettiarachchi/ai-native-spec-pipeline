@@ -1,5 +1,3 @@
-"""Demo application package used by the generated implementation."""
+from .discount_calculator import DiscountValidationError, calculate_discounted_price
 
-from demo_app.discount_calculator import DiscountValidationError, calculate_discounted_price
-
-__all__ = ["DiscountValidationError", "calculate_discounted_price"]
+__all__ = ["calculate_discounted_price", "DiscountValidationError"]

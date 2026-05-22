@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import re
 import subprocess
@@ -85,6 +86,7 @@ def _policy_gate(run_dir: Path, repo_root: Path) -> GateResult:
 
         _check_manifest_paths(manifest, plan, repo_root, details)
         _check_manifest_hashes(manifest, repo_root, details)
+        _check_public_contract(plan, repo_root, details)
         _check_acceptance_coverage(spec, plan, repo_root, details)
     except Exception as exc:  # noqa: BLE001 - policy gate must convert all failures to evidence
         details.append(str(exc))
@@ -107,6 +109,17 @@ def _check_manifest_paths(
 ) -> None:
     allowed_roots = [(repo_root / allowed_path).resolve() for allowed_path in plan.allowed_paths]
     planned_paths = set(plan.impacted_modules_files)
+    manifest_paths = [entry.path for entry in manifest.files]
+    duplicate_paths = sorted({path for path in manifest_paths if manifest_paths.count(path) > 1})
+    if duplicate_paths:
+        details.append(f"generated manifest has duplicate files: {', '.join(duplicate_paths)}")
+
+    missing_paths = sorted(planned_paths - set(manifest_paths))
+    if missing_paths:
+        details.append(
+            "generated manifest is missing approved plan files: "
+            f"{', '.join(missing_paths)}"
+        )
 
     for entry in manifest.files:
         relative_path = Path(entry.path)
@@ -135,6 +148,45 @@ def _check_manifest_hashes(
             details.append(f"generated file hash mismatch: {entry.path}")
 
 
+def _check_public_contract(
+    plan: PlanArtifact,
+    repo_root: Path,
+    details: list[str],
+) -> None:
+    module_path = repo_root / f"demo_app/src/demo_app/{plan.target_module}.py"
+    package_path = repo_root / "demo_app/src/demo_app/__init__.py"
+    required_module_symbols = {plan.target_function, "ACCEPTANCE_CRITERIA"}
+    required_package_exports = {plan.target_function}
+    if plan.target_function == "calculate_discounted_price":
+        required_module_symbols.add("DiscountValidationError")
+        required_package_exports.add("DiscountValidationError")
+
+    module_symbols = _top_level_symbols(module_path, details, "generated module")
+    missing_module_symbols = sorted(required_module_symbols - module_symbols)
+    if missing_module_symbols:
+        details.append(
+            "generated module is missing public symbols: "
+            f"{', '.join(missing_module_symbols)}"
+        )
+
+    package_symbols = _top_level_symbols(package_path, details, "demo package boundary")
+    missing_package_imports = sorted(required_package_exports - package_symbols)
+    if missing_package_imports:
+        details.append(
+            "demo package boundary is missing imports: "
+            f"{', '.join(missing_package_imports)}"
+        )
+
+    package_exports = _all_exports(package_path, details)
+    if package_exports is not None:
+        missing_package_exports = sorted(required_package_exports - package_exports)
+        if missing_package_exports:
+            details.append(
+                "demo package boundary is missing __all__ exports: "
+                f"{', '.join(missing_package_exports)}"
+            )
+
+
 def _check_acceptance_coverage(
     spec: FeatureSpec,
     plan: PlanArtifact,
@@ -149,6 +201,71 @@ def _check_acceptance_coverage(
     missing = sorted(required_ids - observed_ids)
     if missing:
         details.append(f"missing acceptance coverage for: {', '.join(missing)}")
+
+
+def _top_level_symbols(path: Path, details: list[str], label: str) -> set[str]:
+    tree = _parse_python(path, details, label)
+    if tree is None:
+        return set()
+
+    symbols: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):
+            symbols.add(node.name)
+        elif isinstance(node, ast.Import):
+            symbols.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            symbols.update(alias.asname or alias.name for alias in node.names)
+        elif isinstance(node, ast.Assign):
+            for target in node.targets:
+                symbols.update(_assigned_names(target))
+        elif isinstance(node, ast.AnnAssign):
+            symbols.update(_assigned_names(node.target))
+    return symbols
+
+
+def _all_exports(path: Path, details: list[str]) -> set[str] | None:
+    tree = _parse_python(path, details, "demo package boundary")
+    if tree is None:
+        return set()
+
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(
+            isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets
+        ):
+            continue
+        if not isinstance(node.value, ast.List | ast.Tuple):
+            return set()
+        return {
+            item.value
+            for item in node.value.elts
+            if isinstance(item, ast.Constant) and isinstance(item.value, str)
+        }
+    return None
+
+
+def _parse_python(path: Path, details: list[str], label: str) -> ast.Module | None:
+    if not path.exists():
+        details.append(f"{label} is missing: {path}")
+        return None
+    try:
+        return ast.parse(path.read_text(encoding="utf-8"))
+    except SyntaxError as exc:
+        details.append(f"{label} has invalid Python syntax: {exc}")
+        return None
+
+
+def _assigned_names(target: ast.expr) -> set[str]:
+    if isinstance(target, ast.Name):
+        return {target.id}
+    if isinstance(target, ast.Tuple | ast.List):
+        names: set[str] = set()
+        for item in target.elts:
+            names.update(_assigned_names(item))
+        return names
+    return set()
 
 
 def _is_relative_to(path: Path, parent: Path) -> bool:

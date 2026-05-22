@@ -33,6 +33,7 @@ The dashboard supports:
 - approving the plan before implementation
 - generating implementation and tests
 - running validation gates
+- applying deterministic validation fixes to generated files and rerunning validation
 - approving release only after validation passes
 - generating deployment evidence after release approval
 
@@ -65,6 +66,8 @@ python -m pipeline intake specs/examples/discount_calculator.yaml
 python -m pipeline plan specs/examples/discount_calculator.yaml
 python -m pipeline approve <run-id> --stage plan --approver "Your Name"
 python -m pipeline implement <run-id>
+python -m pipeline validate <run-id>
+python -m pipeline repair <run-id>      # optional, when validation reports fixable Ruff issues
 python -m pipeline validate <run-id>
 python -m pipeline approve <run-id> --stage release --approver "Your Name"
 python -m pipeline evidence <run-id>
@@ -119,6 +122,14 @@ or the dashboard.
 - a custom policy gate for allowed paths, manifest hashes, and acceptance-criteria coverage
 
 The pipeline fails closed when a required gate, approval, or artefact is missing.
+
+## Run Generated Demo
+
+After a discount calculator run validates, execute the generated demo function from the repository root:
+
+```powershell
+python -c "from demo_app import calculate_discounted_price; print(calculate_discounted_price(100, 15))"
+```
 
 ## Audit Artefacts
 

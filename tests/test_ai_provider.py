@@ -67,6 +67,8 @@ def test_openai_responses_provider_uses_structured_outputs(
     assert "reasoning" not in request
     assert request["store"] is False
     assert request["text"]["format"]["type"] == "json_schema"  # type: ignore[index]
+    assert "Return one file entry for every approved impacted file" in str(request["input"])
+    assert "DiscountValidationError" in str(request["input"])
     assert change_set.provider == "openai-responses"
     assert change_set.model == "gpt-4o-mini"
     assert provider.last_interaction_metadata["response"]["id"] == "resp_test"

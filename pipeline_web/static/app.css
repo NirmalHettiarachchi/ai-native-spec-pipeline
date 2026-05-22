@@ -1,15 +1,119 @@
 :root {
-  --app-bg: #f5f7fa;
-  --app-nav: #182433;
-  --app-accent: #146c94;
+  --app-bg: #f8f8fa;
+  --app-nav: #292961;
+  --app-accent: #1f75cb;
+  --app-orange: #fc6d26;
+  --app-border: #dcdcde;
+  --app-text: #333238;
+  --app-muted: #737278;
+  --bs-border-radius: 0.25rem;
+  --bs-border-radius-sm: 0.2rem;
+  --bs-border-radius-lg: 0.35rem;
+  --bs-primary: var(--app-accent);
+  --bs-primary-rgb: 31, 117, 203;
+  --bs-warning: var(--app-orange);
+  --bs-warning-rgb: 252, 109, 38;
 }
 
 body {
   background: var(--app-bg);
+  color: var(--app-text);
 }
 
 .app-navbar {
   background: var(--app-nav);
+  border-bottom: 3px solid var(--app-orange);
+}
+
+.navbar-brand {
+  letter-spacing: 0;
+}
+
+.card {
+  border-color: var(--app-border);
+  border-radius: 0.25rem;
+}
+
+.shadow-sm {
+  box-shadow: 0 1px 2px rgba(31, 30, 36, 0.08) !important;
+}
+
+.text-primary {
+  color: var(--app-accent) !important;
+}
+
+.text-secondary,
+.form-text {
+  color: var(--app-muted) !important;
+}
+
+.btn {
+  --bs-btn-border-radius: 0.25rem;
+  --bs-btn-font-weight: 600;
+  min-height: 2.25rem;
+  box-shadow: none;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--app-accent);
+  --bs-btn-border-color: #1068bf;
+  --bs-btn-hover-bg: #0b5cad;
+  --bs-btn-hover-border-color: #0b5cad;
+  --bs-btn-active-bg: #0a4f98;
+  --bs-btn-active-border-color: #0a4f98;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--app-accent);
+  --bs-btn-border-color: var(--app-accent);
+  --bs-btn-hover-bg: #e9f3ff;
+  --bs-btn-hover-border-color: var(--app-accent);
+  --bs-btn-hover-color: #0b5cad;
+  --bs-btn-active-bg: #dbeafe;
+  --bs-btn-active-color: #0a4f98;
+}
+
+.btn-warning {
+  --bs-btn-color: #1f1e24;
+  --bs-btn-bg: var(--app-orange);
+  --bs-btn-border-color: #db5a1c;
+  --bs-btn-hover-color: #1f1e24;
+  --bs-btn-hover-bg: #ec5f1a;
+  --bs-btn-hover-border-color: #c94f16;
+}
+
+.form-control,
+.form-select {
+  border-color: #89888d;
+  border-radius: 0.25rem;
+  color: var(--app-text);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 0.2rem rgba(31, 117, 203, 0.18);
+}
+
+.form-label,
+.form-check-label,
+legend {
+  color: var(--app-text);
+}
+
+.table {
+  --bs-table-hover-bg: #f2f7fd;
+  border-color: var(--app-border);
+}
+
+.table-light {
+  --bs-table-bg: #f1f1f4;
+  --bs-table-color: var(--app-text);
+}
+
+.badge {
+  border-radius: 0.25rem !important;
+  font-weight: 600;
 }
 
 .min-w-0 {
@@ -49,10 +153,10 @@ div[id] {
 
 .provider-status span {
   padding: 0.4rem 0.65rem;
-  border: 1px solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
+  border: 1px solid var(--app-border);
+  border-radius: 0.25rem;
   background: var(--bs-white);
-  color: var(--bs-secondary-color);
+  color: var(--app-muted);
   font-size: 0.9rem;
 }
 
@@ -67,9 +171,9 @@ div[id] {
 .mini-steps span {
   display: block;
   padding: 0.55rem 0.75rem;
-  border: 1px solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
-  background: var(--bs-light);
+  border: 1px solid var(--app-border);
+  border-radius: 0.25rem;
+  background: #fff;
   text-align: center;
   font-weight: 700;
 }
@@ -77,9 +181,9 @@ div[id] {
 .step-card {
   height: 100%;
   padding: 0.85rem;
-  border: 1px solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
-  background: var(--bs-light);
+  border: 1px solid var(--app-border);
+  border-radius: 0.25rem;
+  background: #fff;
 }
 
 .step-card span,
@@ -105,18 +209,18 @@ div[id] {
 }
 
 .step-card.done {
-  border-color: rgba(var(--bs-success-rgb), 0.35);
-  background: rgba(var(--bs-success-rgb), 0.09);
+  border-color: #108548;
+  background: #ecf4ee;
 }
 
 .step-card.done span {
-  background: var(--bs-success);
+  background: #108548;
   color: var(--bs-white);
 }
 
 .step-card.current {
-  border-color: rgba(var(--bs-primary-rgb), 0.35);
-  background: rgba(var(--bs-primary-rgb), 0.08);
+  border-color: var(--app-accent);
+  background: #e9f3ff;
 }
 
 .step-card.blocked {
@@ -124,21 +228,23 @@ div[id] {
 }
 
 .action-card {
-  border-color: var(--bs-border-color);
+  border-color: var(--app-border);
+  border-top: 3px solid #bfbfc3;
 }
 
 .action-card.complete {
-  border-color: rgba(var(--bs-success-rgb), 0.35);
-  background: rgba(var(--bs-success-rgb), 0.04);
+  border-color: #108548;
+  border-top-color: #108548;
+  background: #fbfdfb;
 }
 
 .coverage-card {
-  background: var(--bs-light);
+  background: #fff;
 }
 
 .action-index {
   flex: 0 0 1.75rem;
-  background: var(--app-accent);
+  background: var(--app-nav);
   color: var(--bs-white);
 }
 
@@ -177,14 +283,14 @@ body.is-loading .loading-overlay {
   min-height: 28rem;
   padding: 1rem;
   border-radius: var(--bs-border-radius);
-  background: #111827;
+  background: #1f1e24;
   color: #f8fafc;
 }
 
 .log-output {
   padding: 0.85rem;
   border-radius: var(--bs-border-radius);
-  background: #111827;
+  background: #1f1e24;
   color: #f8fafc;
   font-size: 0.8rem;
 }

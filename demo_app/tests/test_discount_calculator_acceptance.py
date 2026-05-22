@@ -1,37 +1,26 @@
 import pytest
-from demo_app.discount_calculator import ACCEPTANCE_CRITERIA, calculate_discounted_price
 
-ACCEPTANCE_COVERAGE = {
-    "AC-001": "test_ac_001_acceptance_valid_discount",
-    "AC-002": "test_ac_002_acceptance_negative_base_price",
-    "AC-003": "test_ac_003_acceptance_invalid_discount_range",
-    "AC-004": "test_ac_004_acceptance_rounding"
-}
+from demo_app import DiscountValidationError, calculate_discounted_price
 
 
-@pytest.mark.acceptance
-def test_ac_001_acceptance_valid_discount() -> None:
-    """AC-001: valid discounts calculate correctly."""
-
-    assert calculate_discounted_price(250, 10) == 225.0
+# AC-001
+def test_acceptance_calculate_valid_discount():
+    assert calculate_discounted_price(200, 10) == 180.0
 
 
-@pytest.mark.acceptance
-def test_ac_002_acceptance_negative_base_price() -> None:
-    """AC-002: criterion is represented in generated acceptance coverage."""
-
-    assert "AC-002" in ACCEPTANCE_CRITERIA
-
-
-@pytest.mark.acceptance
-def test_ac_003_acceptance_invalid_discount_range() -> None:
-    """AC-003: criterion is represented in generated acceptance coverage."""
-
-    assert "AC-003" in ACCEPTANCE_CRITERIA
+# AC-002
+def test_acceptance_reject_negative_base_price():
+    with pytest.raises(DiscountValidationError, match=r"AC-002"):
+        calculate_discounted_price(-50, 10)
 
 
-@pytest.mark.acceptance
-def test_ac_004_acceptance_rounding() -> None:
-    """AC-004: final price rounds to two decimal places."""
+# AC-003
+@pytest.mark.parametrize("discount_percentage", [-5, 105])
+def test_acceptance_reject_invalid_discount_percentage(discount_percentage):
+    with pytest.raises(DiscountValidationError, match=r"AC-003"):
+        calculate_discounted_price(100, discount_percentage)
 
-    assert calculate_discounted_price(10, 33.333) == 6.67
+
+# AC-004
+def test_acceptance_rounding():
+    assert calculate_discounted_price(250, 66.6667) == 83.33

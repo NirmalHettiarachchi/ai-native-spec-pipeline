@@ -14,6 +14,7 @@ from pipeline.evidence import create_deployment_evidence
 from pipeline.gates import validate_run
 from pipeline.generator import implement_run
 from pipeline.planner import create_plan, write_plan
+from pipeline.repair import repair_validation
 from pipeline.spec_parser import parse_feature_spec
 from pipeline.workflow import run_pipeline
 
@@ -46,6 +47,10 @@ def build_parser() -> argparse.ArgumentParser:
     validate = subparsers.add_parser("validate", help="Run deterministic quality gates.")
     validate.add_argument("run_id")
     validate.set_defaults(func=_cmd_validate)
+
+    repair = subparsers.add_parser("repair", help="Apply deterministic validation fixes.")
+    repair.add_argument("run_id")
+    repair.set_defaults(func=_cmd_repair)
 
     evidence = subparsers.add_parser(
         "evidence",
@@ -111,6 +116,14 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     for gate in results.gates:
         print(f"- {gate.name}: {gate.status}")
     return 0 if results.overall_status == "passed" else 1
+
+
+def _cmd_repair(args: argparse.Namespace) -> int:
+    results = repair_validation(args.run_id)
+    print(f"repair: {results[-1].status}")
+    for result in results:
+        print(f"- {result.name}: {result.status}")
+    return 0 if results[-1].status == "passed" else 1
 
 
 def _cmd_evidence(args: argparse.Namespace) -> int:

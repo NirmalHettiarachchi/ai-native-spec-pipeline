@@ -20,6 +20,7 @@ ALLOWED_ARTEFACTS = {
     "generated_output.json",
     "change_manifest.json",
     "change_summary.md",
+    "validation_repair.json",
     "validation_results.json",
     "approval.release.json",
     "deployment_evidence.md",
@@ -333,7 +334,7 @@ def _stage_and_next_action(
     if not has_validation:
         return "Implementation generated", "Run validation"
     if validation_status != "passed":
-        return "Validation failed", "Fix issues and rerun validation"
+        return "Validation failed", "Fix validation and rerun gates"
     if not release_approved:
         return "Validation passed", "Release approval required"
     if not has_evidence:
