@@ -1,28 +1,67 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<section id="create-run" class="card shadow-sm mb-4 border-0 border-top border-4 border-primary">
-  <div class="card-body">
-    <div class="row g-4 align-items-start">
-      <div class="col-12 col-xl-7">
-        <p class="text-uppercase text-primary fw-bold small mb-2">Local governance dashboard</p>
-        <h1 class="h3 mb-2">Runs</h1>
-        <p class="text-secondary mb-0">
-          Create and track governed development runs.
-        </p>
+{% set metrics = namespace(passed=0, failed=0, waiting=0) %}
+{% for run in run_page.items %}
+  {% if run.validation_status == "passed" %}
+    {% set metrics.passed = metrics.passed + 1 %}
+  {% elif run.validation_status == "failed" %}
+    {% set metrics.failed = metrics.failed + 1 %}
+  {% else %}
+    {% set metrics.waiting = metrics.waiting + 1 %}
+  {% endif %}
+{% endfor %}
+<section id="create-run" class="ci-home-shell mb-4">
+  <div class="ci-home-header">
+    <div class="min-w-0">
+      <p class="ci-overline mb-2">
+        <span class="ci-status-light" aria-hidden="true"></span>
+        Local governance dashboard
+      </p>
+      <h1 class="h3 mb-2">Pipeline Console</h1>
+      <p class="text-secondary mb-0">
+        Create a governed run, generate changes, repair validation, and move through release gates.
+      </p>
+    </div>
+    <div class="ci-health-grid" aria-label="Visible run health">
+      <div>
+        <span>{{ run_page.total }}</span>
+        <strong>Total</strong>
       </div>
-      <div class="col-12 col-xl-5">
-        <ol class="list-unstyled row row-cols-2 row-cols-sm-3 g-2 mb-0 mini-steps">
-          <li class="col"><span>Plan</span></li>
-          <li class="col"><span>Approve</span></li>
-          <li class="col"><span>Generate</span></li>
-          <li class="col"><span>Validate</span></li>
-          <li class="col"><span>Release</span></li>
-          <li class="col"><span>Evidence</span></li>
-        </ol>
+      <div class="passed">
+        <span>{{ metrics.passed }}</span>
+        <strong>Passed</strong>
+      </div>
+      <div class="failed">
+        <span>{{ metrics.failed }}</span>
+        <strong>Failed</strong>
+      </div>
+      <div>
+        <span>{{ metrics.waiting }}</span>
+        <strong>Waiting</strong>
       </div>
     </div>
-    <div class="provider-status mt-3" aria-label="AI provider status">
+  </div>
+
+  <ol class="list-unstyled mini-steps ci-stage-rail mb-4" aria-label="Pipeline stages">
+    <li><span>Plan</span></li>
+    <li><span>Approve</span></li>
+    <li><span>Build</span></li>
+    <li><span>Validate</span></li>
+    <li><span>Repair</span></li>
+    <li><span>Release</span></li>
+    <li><span>Evidence</span></li>
+  </ol>
+
+  <div class="ci-control-panel">
+    <div class="ci-panel-header">
+      <div>
+        <h2 class="h6 mb-1">New Pipeline</h2>
+        <p class="text-secondary small mb-0">Select a spec, start a run, then follow the gated jobs.</p>
+      </div>
+      <span class="pipeline-ref">audit/runs</span>
+    </div>
+    <div class="provider-status" aria-label="AI provider status">
       <span><strong>AI mode:</strong> {{ runtime_config.ai_provider_mode }}</span>
       <span><strong>Provider:</strong> {{ runtime_config.resolved_ai_provider }}</span>
       <span><strong>Model:</strong> {{ runtime_config.openai_model }}</span>
@@ -37,7 +76,7 @@
       action="/runs"
       data-loading-label="Creating run..."
       data-spec-source-form
-      class="mt-3"
+      class="ci-create-form mt-3"
       enctype="multipart/form-data"
     >
       <fieldset class="mb-3">
@@ -116,11 +155,10 @@
   </div>
 </section>
 
-<section id="runs" class="card shadow-sm border-0">
-  <div class="card-body">
-    <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+<section id="runs" class="ci-runs-panel">
+    <div class="ci-runs-header">
       <div>
-        <h2 class="h5 mb-1">Recent Runs</h2>
+        <h2 class="h5 mb-1">Pipelines</h2>
         {% if run_page.total %}
           <p class="text-secondary small mb-0">
             Showing {{ run_page.start_index }}-{{ run_page.end_index }} of {{ run_page.total }}
@@ -130,6 +168,7 @@
           <p class="text-danger small mt-2 mb-0">{{ error }}</p>
         {% endif %}
       </div>
+      <a class="btn btn-outline-primary btn-sm" href="#create-run">New Pipeline</a>
       {% if run_page.total_pages > 1 %}
         <nav aria-label="Run pages">
           <ul class="pagination pagination-sm mb-0">
@@ -148,13 +187,13 @@
         </nav>
       {% endif %}
     </div>
-    <div class="table-responsive d-none d-lg-block run-table">
+    <div class="table-responsive d-none d-lg-block run-table ci-pipeline-list">
       <table class="table table-hover align-middle mb-0">
         <thead class="table-light">
           <tr>
             <th>Run</th>
             <th>Feature</th>
-            <th>Stage</th>
+            <th>Pipeline</th>
             <th>Validation</th>
             <th>Approvals</th>
             <th>Next Action</th>
@@ -162,10 +201,48 @@
         </thead>
         <tbody>
           {% for run in run_page.items %}
-            <tr>
-              <td class="text-break"><a href="/runs/{{ run.run_id }}">{{ run.run_id }}</a></td>
+            <tr class="ci-run-row">
+              <td class="text-break">
+                <div class="ci-run-title">
+                  <span
+                    class="ci-run-status-dot {{ 'passed' if run.validation_status == 'passed' else 'failed' if run.validation_status == 'failed' else 'pending' }}"
+                    aria-hidden="true"
+                  ></span>
+                  <a href="/runs/{{ run.run_id }}">{{ run.run_id }}</a>
+                </div>
+                <div class="ci-run-ref">{{ run.created_at or "created" }}</div>
+              </td>
               <td class="text-break">{{ run.feature }}</td>
-              <td><span class="badge rounded-pill text-bg-secondary">{{ run.stage }}</span></td>
+              <td>
+                <div class="run-pipeline-mini" aria-label="{{ run.stage }}">
+                  <span class="{{ 'done' if run.has_plan else 'running' }}" title="Plan"></span>
+                  <span
+                    class="{{ 'done' if run.plan_approved else 'running' if run.has_plan else 'todo' }}"
+                    title="Approve"
+                  ></span>
+                  <span
+                    class="{{ 'done' if run.has_changes else 'running' if run.plan_approved else 'todo' }}"
+                    title="Build"
+                  ></span>
+                  <span
+                    class="{{ 'done' if run.validation_status == 'passed' else 'failed' if run.validation_status == 'failed' else 'running' if run.has_changes else 'todo' }}"
+                    title="Validate"
+                  ></span>
+                  <span
+                    class="{{ 'skipped' if run.validation_status == 'passed' else 'running' if run.validation_status == 'failed' else 'todo' }}"
+                    title="Repair"
+                  ></span>
+                  <span
+                    class="{{ 'done' if run.release_approved else 'running' if run.validation_status == 'passed' else 'todo' }}"
+                    title="Release"
+                  ></span>
+                  <span
+                    class="{{ 'done' if run.has_evidence else 'running' if run.release_approved else 'todo' }}"
+                    title="Evidence"
+                  ></span>
+                </div>
+                <span class="small text-secondary">{{ run.stage }}</span>
+              </td>
               <td>
                 <span class="badge rounded-pill {{ 'text-bg-success' if run.validation_status == 'passed' else 'text-bg-danger' if run.validation_status == 'failed' else 'text-bg-light text-secondary' }}">
                   {{ run.validation_status }}
@@ -175,11 +252,16 @@
                 Plan: {{ "yes" if run.plan_approved else "no" }}<br>
                 Release: {{ "yes" if run.release_approved else "no" }}
               </td>
-              <td class="text-break">{{ run.next_action }}</td>
+              <td class="text-break">
+                <div class="ci-next-action">{{ run.next_action }}</div>
+                <a class="btn btn-outline-primary btn-sm mt-2" href="/runs/{{ run.run_id }}">Open Run</a>
+              </td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="6" class="text-secondary">No audit runs found.</td>
+              <td colspan="6">
+                <div class="ci-empty-state">No audit runs found.</div>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -191,10 +273,43 @@
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start gap-3">
               <div class="min-w-0">
-                <h3 class="h6 mb-1 text-break">{{ run.feature }}</h3>
+                <h3 class="h6 mb-1 text-break">
+                  <span
+                    class="ci-run-status-dot {{ 'passed' if run.validation_status == 'passed' else 'failed' if run.validation_status == 'failed' else 'pending' }}"
+                    aria-hidden="true"
+                  ></span>
+                  {{ run.feature }}
+                </h3>
                 <p class="small text-secondary text-break mb-0">{{ run.run_id }}</p>
               </div>
               <span class="badge rounded-pill text-bg-secondary">{{ run.stage }}</span>
+            </div>
+            <div class="run-pipeline-mini my-3" aria-label="{{ run.stage }}">
+              <span class="{{ 'done' if run.has_plan else 'running' }}" title="Plan"></span>
+              <span
+                class="{{ 'done' if run.plan_approved else 'running' if run.has_plan else 'todo' }}"
+                title="Approve"
+              ></span>
+              <span
+                class="{{ 'done' if run.has_changes else 'running' if run.plan_approved else 'todo' }}"
+                title="Build"
+              ></span>
+              <span
+                class="{{ 'done' if run.validation_status == 'passed' else 'failed' if run.validation_status == 'failed' else 'running' if run.has_changes else 'todo' }}"
+                title="Validate"
+              ></span>
+              <span
+                class="{{ 'skipped' if run.validation_status == 'passed' else 'running' if run.validation_status == 'failed' else 'todo' }}"
+                title="Repair"
+              ></span>
+              <span
+                class="{{ 'done' if run.release_approved else 'running' if run.validation_status == 'passed' else 'todo' }}"
+                title="Release"
+              ></span>
+              <span
+                class="{{ 'done' if run.has_evidence else 'running' if run.release_approved else 'todo' }}"
+                title="Evidence"
+              ></span>
             </div>
             <dl class="row row-cols-1 row-cols-sm-3 g-2 mt-3 mb-3">
               <div class="col">
@@ -222,6 +337,5 @@
         <p class="text-secondary mb-0">No audit runs found.</p>
       {% endfor %}
     </div>
-  </div>
 </section>
 {% endblock %}

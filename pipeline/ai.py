@@ -486,6 +486,7 @@ def _implementation_contract(plan: PlanArtifact) -> str:
             f"- Return `{package_path}` importing and exporting: "
             f"{', '.join(required_package_exports)}.",
             "- Return acceptance tests that include every AC ID literally for traceability.",
+            "- Do not use eval or exec; parse expressions with explicit allowlists instead.",
             "- Generated Python must pass Ruff import sorting and the configured 100 character "
             "line length.",
         ]

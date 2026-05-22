@@ -280,6 +280,11 @@ def test_web_routes_can_execute_governed_flow(
 
     assert client.post(f"/runs/{run_id}/implement").status_code == 303
     assert client.post(f"/runs/{run_id}/validate").status_code == 303
+    stale_error_detail = client.get(
+        f"/runs/{run_id}?error=old+repair+error&action=repair-validation#actions"
+    )
+    assert "old repair error" not in stale_error_detail.text
+    assert "Validation passed." in stale_error_detail.text
     assert client.post(f"/runs/{run_id}/repair-validation").status_code == 303
     assert client.post(
         f"/runs/{run_id}/approve-release",

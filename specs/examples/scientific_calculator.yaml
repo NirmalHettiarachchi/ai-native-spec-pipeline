@@ -1,0 +1,39 @@
+schema_version: "1.0"
+feature_id: scientific-calculator
+feature_name: Scientific Calculator
+feature_objective: >
+  Provide a deterministic scientific calculator capability for arithmetic,
+  trigonometric, logarithmic, exponent, and root operations.
+user_story: >
+  As a user, I want to evaluate scientific calculator expressions so that I can
+  perform accurate mathematical calculations from a single reusable function.
+business_rules:
+  - The calculator must support addition, subtraction, multiplication, and division.
+  - The calculator must support powers, square roots, logarithms, and trigonometric functions.
+  - Trigonometric functions must support radians.
+  - Division by zero must produce a clear validation error.
+  - Invalid expressions or unsupported operations must produce a clear validation error.
+  - Results must be deterministic and rounded only when explicitly required by the operation.
+acceptance_criteria:
+  - id: AC-001
+    description: Evaluate basic arithmetic expressions correctly.
+  - id: AC-002
+    description: Evaluate exponent and square root operations correctly.
+  - id: AC-003
+    description: Evaluate logarithmic operations correctly.
+  - id: AC-004
+    description: Evaluate sine, cosine, and tangent in radians correctly.
+  - id: AC-005
+    description: Reject division by zero with a validation error.
+  - id: AC-006
+    description: Reject invalid or unsupported expressions with a validation error.
+non_functional_requirements:
+  - The calculator must be deterministic.
+  - The implementation must not perform network or file I/O.
+  - Generated tests must trace to acceptance criterion IDs.
+  - The implementation must be small enough to review manually.
+out_of_scope:
+  - Graph plotting.
+  - Unit conversion.
+  - Symbolic algebra.
+  - Persistent calculation history.

@@ -114,6 +114,13 @@ async def run_detail(
             },
             status_code=404,
         )
+    if (
+        error
+        and action in {"validate", "repair-validation"}
+        and detail["state"].validation_status == "passed"
+    ):
+        error = ""
+        message = message or "Validation passed."
     return templates.TemplateResponse(
         request,
         "run_detail.html",

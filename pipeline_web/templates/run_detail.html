@@ -85,48 +85,51 @@
   </div>
 </section>
 
-<section class="card shadow-sm border-0 mb-4" id="workflow">
-  <div class="card-body">
-    <h2 class="h5 mb-3">Workflow</h2>
-    <ol class="list-unstyled row row-cols-1 row-cols-sm-2 row-cols-xl-6 g-2 mb-0 workflow-stepper">
-      <li class="col">
-        <div class="step-card {{ 'done' if state.has_plan else 'current' }}">
-          <span>1</span>
-          <strong>Plan Created</strong>
-        </div>
-      </li>
-      <li class="col">
-        <div class="step-card {{ 'done' if state.plan_approved else 'current' if state.has_plan else 'blocked' }}">
-          <span>2</span>
-          <strong>Plan Approved</strong>
-        </div>
-      </li>
-      <li class="col">
-        <div class="step-card {{ 'done' if state.has_changes else 'current' if state.plan_approved else 'blocked' }}">
-          <span>3</span>
-          <strong>Implementation Generated</strong>
-        </div>
-      </li>
-      <li class="col">
-        <div class="step-card {{ 'done' if state.validation_status == 'passed' else 'current' if state.has_changes else 'blocked' }}">
-          <span>4</span>
-          <strong>Validation Passed</strong>
-        </div>
-      </li>
-      <li class="col">
-        <div class="step-card {{ 'done' if state.release_approved else 'current' if state.validation_status == 'passed' else 'blocked' }}">
-          <span>5</span>
-          <strong>Release Approved</strong>
-        </div>
-      </li>
-      <li class="col">
-        <div class="step-card {{ 'done' if state.has_evidence else 'current' if state.release_approved else 'blocked' }}">
-          <span>6</span>
-          <strong>Evidence Ready</strong>
-        </div>
-      </li>
-    </ol>
+<section class="pipeline-board mb-4" id="workflow" aria-label="Pipeline status">
+  <div class="d-flex flex-column flex-lg-row justify-content-between gap-2 mb-3">
+    <div>
+      <h2 class="h5 mb-1">Pipeline</h2>
+      <p class="text-secondary mb-0">Stage status follows the same gates used for release approval.</p>
+    </div>
+    <span class="pipeline-ref text-break">{{ state.run_id }}</span>
   </div>
+  <ol class="list-unstyled pipeline-track workflow-stepper mb-0">
+    <li class="pipeline-stage {{ 'done' if state.has_plan else 'current' }}">
+      <span class="pipeline-node">1</span>
+      <strong>Plan</strong>
+      <small>{{ 'passed' if state.has_plan else 'running' }}</small>
+    </li>
+    <li class="pipeline-stage {{ 'done' if state.plan_approved else 'current' if state.has_plan else 'blocked' }}">
+      <span class="pipeline-node">2</span>
+      <strong>Approve</strong>
+      <small>{{ 'passed' if state.plan_approved else 'manual' if state.has_plan else 'blocked' }}</small>
+    </li>
+    <li class="pipeline-stage {{ 'done' if state.has_changes else 'current' if state.plan_approved else 'blocked' }}">
+      <span class="pipeline-node">3</span>
+      <strong>Build</strong>
+      <small>{{ 'passed' if state.has_changes else 'manual' if state.plan_approved else 'blocked' }}</small>
+    </li>
+    <li class="pipeline-stage {{ 'done' if state.validation_status == 'passed' else 'failed' if state.validation_status == 'failed' else 'current' if state.has_changes else 'blocked' }}">
+      <span class="pipeline-node">4</span>
+      <strong>Validate</strong>
+      <small>{{ state.validation_status }}</small>
+    </li>
+    <li class="pipeline-stage {{ 'done' if state.validation_status == 'passed' else 'current' if state.validation_status == 'failed' else 'blocked' }}">
+      <span class="pipeline-node">5</span>
+      <strong>Repair</strong>
+      <small>{{ 'available' if state.validation_status == 'failed' else 'skipped' if state.validation_status == 'passed' else 'blocked' }}</small>
+    </li>
+    <li class="pipeline-stage {{ 'done' if state.release_approved else 'current' if state.validation_status == 'passed' else 'blocked' }}">
+      <span class="pipeline-node">6</span>
+      <strong>Release</strong>
+      <small>{{ 'passed' if state.release_approved else 'manual' if state.validation_status == 'passed' else 'blocked' }}</small>
+    </li>
+    <li class="pipeline-stage {{ 'done' if state.has_evidence else 'current' if state.release_approved else 'blocked' }}">
+      <span class="pipeline-node">7</span>
+      <strong>Evidence</strong>
+      <small>{{ 'passed' if state.has_evidence else 'manual' if state.release_approved else 'blocked' }}</small>
+    </li>
+  </ol>
 </section>
 
 <section class="card shadow-sm border-0 mb-4" id="actions">
@@ -231,7 +234,7 @@
       </div>
 
       <div class="col">
-        <article class="card h-100 action-card {{ 'complete' if state.validation_status == 'passed' else '' }}">
+        <article class="card h-100 action-card {{ 'complete' if state.validation_status == 'passed' else 'failed' if state.validation_status == 'failed' else '' }}">
           <div class="card-body d-flex flex-column">
             <div class="d-flex gap-3">
               <span class="action-index">3</span>
@@ -270,7 +273,7 @@
       </div>
 
       <div class="col">
-        <article class="card h-100 action-card {{ 'complete' if state.validation_status == 'passed' else '' }}">
+        <article class="card h-100 action-card {{ 'complete' if state.validation_status == 'passed' else 'current' if state.validation_status == 'failed' else '' }}">
           <div class="card-body">
             <div class="d-flex gap-3">
               <span class="action-index">4</span>
