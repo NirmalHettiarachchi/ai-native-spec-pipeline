@@ -731,6 +731,15 @@ div[id] {
   margin-top: 0.5rem;
 }
 
+.generated-change-action {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.generated-change-action .btn {
+  white-space: nowrap;
+}
+
 .editor-shell {
   min-height: calc(100vh - 8rem);
   padding: 1rem;
@@ -801,7 +810,8 @@ div[id] {
 
 .code-editor {
   flex: 1 1 auto;
-  min-height: min(62vh, 44rem);
+  height: clamp(24rem, 58vh, 32rem);
+  min-height: 22rem;
   width: 100%;
   font-family: var(--bs-font-monospace);
   font-size: 0.9rem;
@@ -1020,6 +1030,11 @@ code {
 
   .editor-grid {
     grid-template-columns: 1fr;
+  }
+
+  .code-editor {
+    height: 22rem;
+    min-height: 18rem;
   }
 
   .artefact {

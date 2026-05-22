@@ -1,5 +1,3 @@
-"""Safe editor helpers for generated run files."""
-
 from __future__ import annotations
 
 import hashlib

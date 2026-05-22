@@ -1,5 +1,3 @@
-"""Run the local governance dashboard."""
-
 from __future__ import annotations
 
 import uvicorn

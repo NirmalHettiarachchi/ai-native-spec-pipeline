@@ -1,5 +1,3 @@
-"""Read-only run state derived from audit artefacts."""
-
 from __future__ import annotations
 
 import json

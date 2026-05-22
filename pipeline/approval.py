@@ -1,5 +1,3 @@
-"""Human approval records and approval enforcement."""
-
 from __future__ import annotations
 
 from typing import Literal

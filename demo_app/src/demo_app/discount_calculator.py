@@ -1,19 +1,19 @@
 class DiscountValidationError(Exception):
-    """Exception raised for errors in the discount calculation input."""
-
     pass
 
 
-def calculate_discounted_price(base_price: float, discount_percentage: float) -> float:
-    """Calculate the discounted price given a base price and a discount percentage."""
+def calculate_discounted_price(base_price, discount_percentage):
+    # Validate inputs
     if base_price < 0:
-        raise DiscountValidationError("AC-002: Base price cannot be negative.")
-    if not (0 <= discount_percentage <= 100):
-        raise DiscountValidationError(
-            "AC-003: Discount percentage must be between 0 and 100 inclusive."
-        )
+        raise DiscountValidationError("Base price cannot be negative.")
+
+    if discount_percentage < 0 or discount_percentage > 100:
+        raise DiscountValidationError("Discount percentage must be between 0 and 100 inclusive.")
+
+    # Calculate discounted price
     discounted_price = base_price * (1 - discount_percentage / 100)
-    return round(discounted_price, 2)  # AC-004: Round to two decimal places
+    # Round to two decimal places
+    return round(discounted_price, 2)
 
 
 ACCEPTANCE_CRITERIA = [

@@ -1,5 +1,3 @@
-"""Command-line interface for the spec-driven pipeline."""
-
 from __future__ import annotations
 
 import argparse

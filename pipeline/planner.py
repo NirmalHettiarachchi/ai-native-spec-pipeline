@@ -1,5 +1,3 @@
-"""Planning layer for turning validated specs into technical artefacts."""
-
 from __future__ import annotations
 
 from pathlib import Path

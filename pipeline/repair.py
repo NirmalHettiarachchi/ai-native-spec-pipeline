@@ -1,5 +1,3 @@
-"""Automated repair helpers for generated validation failures."""
-
 from __future__ import annotations
 
 import hashlib
@@ -455,7 +453,6 @@ import pytest
 from demo_app import CalculatorError, run_scientific_calculator
 
 
-# Test basic arithmetic operations
 @pytest.mark.parametrize(
     "operation, operands, expected",
     [
@@ -487,7 +484,6 @@ def test_logarithm():
     assert run_scientific_calculator("log", math.e) == pytest.approx(1.0)
 
 
-# Test trigonometric functions
 @pytest.mark.parametrize(
     "operation, operand, expected",
     [
@@ -507,7 +503,6 @@ import pytest
 from demo_app import CalculatorError, run_scientific_calculator
 
 
-# Acceptance Test: AC-001 Basic Arithmetic
 @pytest.mark.parametrize(
     "operation, operands, expected",
     [
@@ -521,7 +516,6 @@ def test_ac_001_basic_arithmetic(operation, operands, expected):
     assert run_scientific_calculator(operation, *operands) == expected
 
 
-# Acceptance Test: AC-002 Exponent and Square Root
 @pytest.mark.parametrize(
     "operation, operands, expected",
     [
@@ -533,7 +527,6 @@ def test_ac_002_exponent_and_square_root(operation, operands, expected):
     assert run_scientific_calculator(operation, *operands) == expected
 
 
-# Acceptance Test: AC-003 Logarithmic Operations
 @pytest.mark.parametrize(
     "operand, expected",
     [
@@ -545,7 +538,6 @@ def test_ac_003_logarithmic_operations(operand, expected):
     assert run_scientific_calculator("log", operand) == pytest.approx(expected)
 
 
-# Acceptance Test: AC-004 Trigonometric Functions
 @pytest.mark.parametrize(
     "operation, operand, expected",
     [
@@ -558,13 +550,11 @@ def test_ac_004_trigonometric_functions(operation, operand, expected):
     assert run_scientific_calculator(operation, operand) == pytest.approx(expected)
 
 
-# Acceptance Test: AC-005 Division by Zero
 def test_ac_005_division_by_zero():
     with pytest.raises(CalculatorError, match="Division by zero."):
         run_scientific_calculator("/", 4, 0)
 
 
-# Acceptance Test: AC-006 Invalid Expressions
 def test_ac_006_invalid_expressions():
     with pytest.raises(CalculatorError, match="Unsupported operation."):
         run_scientific_calculator("invalid", 1, 2)

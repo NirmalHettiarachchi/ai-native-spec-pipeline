@@ -1,5 +1,3 @@
-"""Spec discovery and upload helpers for the dashboard."""
-
 from __future__ import annotations
 
 import hashlib

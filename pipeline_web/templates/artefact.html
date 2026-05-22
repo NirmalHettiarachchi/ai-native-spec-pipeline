@@ -16,6 +16,9 @@
     {% if error %}
       <div class="alert alert-danger mb-0">{{ error }}</div>
     {% else %}
+      {% if message %}
+        <div class="alert alert-success mb-3">{{ message }}</div>
+      {% endif %}
       <pre class="artefact overflow-auto mb-0">{{ content }}</pre>
     {% endif %}
   </div>

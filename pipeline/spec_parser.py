@@ -1,5 +1,3 @@
-"""Parse Markdown, YAML, and JSON feature specifications."""
-
 from __future__ import annotations
 
 import json

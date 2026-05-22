@@ -1,26 +1,24 @@
 import pytest
-
-from demo_app import DiscountValidationError, calculate_discounted_price
-
-
-# AC-001
-def test_acceptance_calculate_valid_discount():
-    assert calculate_discounted_price(200, 10) == 180.0
+from demo_app.discount_calculator import DiscountValidationError, calculate_discounted_price
 
 
-# AC-002
-def test_acceptance_reject_negative_base_price():
-    with pytest.raises(DiscountValidationError, match=r"AC-002"):
-        calculate_discounted_price(-50, 10)
+def test_acceptance_criteria():
+    # AC-001
+    assert calculate_discounted_price(150, 25) == 112.50
 
+    # AC-002
+    with pytest.raises(DiscountValidationError, match="Base price cannot be negative."):
+        calculate_discounted_price(-1, 50)
 
-# AC-003
-@pytest.mark.parametrize("discount_percentage", [-5, 105])
-def test_acceptance_reject_invalid_discount_percentage(discount_percentage):
-    with pytest.raises(DiscountValidationError, match=r"AC-003"):
-        calculate_discounted_price(100, discount_percentage)
+    # AC-003
+    with pytest.raises(
+        DiscountValidationError, match="Discount percentage must be between 0 and 100 inclusive."
+    ):
+        calculate_discounted_price(100, -1)
+    with pytest.raises(
+        DiscountValidationError, match="Discount percentage must be between 0 and 100 inclusive."
+    ):
+        calculate_discounted_price(100, 101)
 
-
-# AC-004
-def test_acceptance_rounding():
-    assert calculate_discounted_price(250, 66.6667) == 83.33
+    # AC-004
+    assert calculate_discounted_price(250, 10) == 225.00

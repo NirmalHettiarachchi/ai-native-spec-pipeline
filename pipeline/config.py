@@ -1,5 +1,3 @@
-"""Runtime configuration loaded from environment and optional .env files."""
-
 from __future__ import annotations
 
 import os

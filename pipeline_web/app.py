@@ -1,5 +1,3 @@
-"""FastAPI application for the local governance dashboard."""
-
 from __future__ import annotations
 
 import re
@@ -317,11 +315,19 @@ async def approve_release(request: Request, run_id: str) -> RedirectResponse:
 
 @app.post("/runs/{run_id}/evidence")
 async def evidence(run_id: str) -> RedirectResponse:
-    return _run_action(
-        run_id,
-        lambda: create_deployment_evidence(run_id),
-        "Evidence generated.",
-        "evidence",
+    try:
+        create_deployment_evidence(run_id)
+    except PipelineError as exc:
+        return _redirect(
+            f"/runs/{run_id}",
+            error=str(exc),
+            action="evidence",
+            fragment="actions",
+        )
+    return _redirect(
+        f"/runs/{run_id}/artefacts/deployment_evidence.md",
+        message="Evidence generated.",
+        action="evidence",
     )
 
 

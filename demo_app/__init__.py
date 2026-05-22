@@ -1,5 +1,3 @@
-"""Convenience imports for running the generated demo app from the repo root."""
-
 from importlib import import_module
 from pathlib import Path
 

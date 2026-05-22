@@ -1,5 +1,3 @@
-"""Deterministic validation gates for generated changes."""
-
 from __future__ import annotations
 
 import ast
@@ -88,7 +86,7 @@ def _policy_gate(run_dir: Path, repo_root: Path) -> GateResult:
         _check_manifest_hashes(manifest, repo_root, details)
         _check_public_contract(plan, repo_root, details)
         _check_acceptance_coverage(spec, plan, repo_root, details)
-    except Exception as exc:  # noqa: BLE001 - policy gate must convert all failures to evidence
+    except Exception as exc:  # noqa: BLE001
         details.append(str(exc))
 
     finished = utc_now()

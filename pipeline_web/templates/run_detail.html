@@ -406,17 +406,24 @@
                 Ready.
               {% endif %}
             </p>
-            <form class="mt-auto" method="post" action="/runs/{{ state.run_id }}/evidence" data-loading-label="Generating evidence...">
-              <button
-                class="btn btn-primary w-100"
-                type="submit"
-                data-loading-label="Generating evidence..."
-                {% if not state.release_approved or state.has_evidence %}disabled{% endif %}
-              >
-                <i class="icon" data-lucide="file-check-2"></i>
-                Generate Evidence
-              </button>
-            </form>
+            {% if state.has_evidence %}
+              <a class="btn btn-primary w-100 mt-auto" href="/runs/{{ state.run_id }}/artefacts/deployment_evidence.md">
+                <i class="icon" data-lucide="file-search"></i>
+                View Evidence
+              </a>
+            {% else %}
+              <form class="mt-auto" method="post" action="/runs/{{ state.run_id }}/evidence" data-loading-label="Generating evidence...">
+                <button
+                  class="btn btn-primary w-100"
+                  type="submit"
+                  data-loading-label="Generating evidence..."
+                  {% if not state.release_approved %}disabled{% endif %}
+                >
+                  <i class="icon" data-lucide="file-check-2"></i>
+                  Generate Evidence
+                </button>
+              </form>
+            {% endif %}
           </div>
         </article>
       </div>
@@ -486,7 +493,7 @@
               <td class="text-break">{{ file.purpose }}</td>
               <td class="text-break">{{ file.acceptance_criteria|join(", ") if file.acceptance_criteria else "N/A" }}</td>
               <td><code class="text-break d-inline-block">{{ file.content_sha256 }}</code></td>
-              <td>
+              <td class="generated-change-action">
                 <a
                   class="btn btn-outline-primary btn-sm"
                   href="/runs/{{ state.run_id }}/editor?file={{ file.path }}"

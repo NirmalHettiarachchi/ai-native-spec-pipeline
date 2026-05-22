@@ -1,5 +1,3 @@
-"""Domain errors surfaced by the pipeline CLI."""
-
 
 class PipelineError(Exception):
     """Base exception for user-correctable pipeline failures."""

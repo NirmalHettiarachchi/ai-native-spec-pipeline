@@ -1,5 +1,3 @@
-"""AI provider abstraction for implementation generation."""
-
 from __future__ import annotations
 
 import json
@@ -108,7 +106,7 @@ class OpenAIResponsesProvider:
         api_key = get_openai_api_key()
         try:
             from openai import OpenAI
-        except ImportError as exc:  # pragma: no cover - dependency is installed in supported setup
+        except ImportError as exc:  # pragma: no cover
             raise PipelineError(
                 "install the openai package to use PIPELINE_AI_PROVIDER=openai"
             ) from exc
@@ -141,7 +139,7 @@ class OpenAIResponsesProvider:
                 request_payload["reasoning"] = {"effort": self.reasoning_effort}
             create_response = cast(Any, self.client.responses.create)
             response = create_response(**request_payload)
-        except Exception as exc:  # noqa: BLE001 - convert SDK failures to pipeline errors
+        except Exception as exc:  # noqa: BLE001
             raise PipelineError(f"OpenAI Responses generation failed: {exc}") from exc
 
         content = _response_output_text(response)
