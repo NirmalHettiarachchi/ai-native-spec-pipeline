@@ -25,6 +25,7 @@ from pipeline.generator import implement_run
 from pipeline.planner import create_plan, write_plan
 from pipeline.repair import repair_validation
 from pipeline.spec_parser import parse_feature_spec
+from pipeline_web.editable_files import read_editor_context, save_editable_file
 from pipeline_web.run_state import list_runs_page, read_allowed_artefact, read_run_detail
 from pipeline_web.spec_catalog import (
     DEFAULT_SPEC,
@@ -233,6 +234,67 @@ async def repair_validation_action(run_id: str) -> RedirectResponse:
     )
 
 
+@app.get("/runs/{run_id}/editor", response_class=HTMLResponse)
+async def file_editor(
+    request: Request,
+    run_id: str,
+    file: str = "",
+    gate: str = "",
+    message: str = "",
+    error: str = "",
+) -> HTMLResponse:
+    try:
+        context = read_editor_context(run_id, selected_path=file, gate_name=gate)
+    except PipelineError as exc:
+        return templates.TemplateResponse(
+            request,
+            "file_editor.html",
+            {
+                "run_id": run_id,
+                "editor": None,
+                "message": "",
+                "error": str(exc),
+                "runtime_config": get_runtime_config().to_public_dict(),
+            },
+            status_code=404,
+        )
+    return templates.TemplateResponse(
+        request,
+        "file_editor.html",
+        {
+            "run_id": run_id,
+            "editor": context,
+            "message": message,
+            "error": error,
+            "runtime_config": get_runtime_config().to_public_dict(),
+        },
+    )
+
+
+@app.post("/runs/{run_id}/editor")
+async def save_file_editor(request: Request, run_id: str) -> RedirectResponse:
+    form = await _read_form(request)
+    file_path = form.get("file_path", "")
+    gate_name = form.get("gate", "")
+    try:
+        save_editable_file(run_id, file_path=file_path, content=form.get("content", ""))
+    except PipelineError as exc:
+        return _redirect(
+            f"/runs/{run_id}/editor",
+            error=str(exc),
+            action="edit-file",
+            fragment="editor",
+        )
+    return _redirect(
+        f"/runs/{run_id}/editor",
+        message="File saved. Run validation again.",
+        action="edit-file",
+        field=file_path,
+        fragment="editor",
+        extra={"file": file_path, "gate": gate_name},
+    )
+
+
 @app.post("/runs/{run_id}/approve-release")
 async def approve_release(request: Request, run_id: str) -> RedirectResponse:
     form = await _read_form(request)
@@ -355,6 +417,7 @@ def _redirect(
     field: str = "",
     action: str = "",
     fragment: str = "",
+    extra: dict[str, str] | None = None,
 ) -> RedirectResponse:
     params: dict[str, str] = {}
     if message:
@@ -365,6 +428,8 @@ def _redirect(
         params["field"] = field
     if action:
         params["action"] = action
+    if extra:
+        params.update({key: value for key, value in extra.items() if value})
     suffix = f"?{urlencode(params)}" if params else ""
     anchor = f"#{fragment}" if fragment else ""
     return RedirectResponse(f"{path}{suffix}{anchor}", status_code=303)

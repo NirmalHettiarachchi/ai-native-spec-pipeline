@@ -347,3 +347,91 @@ def test_web_api_endpoints_expose_status_and_runs(
 
     missing = client.get("/api/runs/missing")
     assert missing.status_code == 404
+
+
+def test_web_editor_edits_manifest_file_and_refreshes_hash(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PIPELINE_AUDIT_ROOT", str(tmp_path / "audit"))
+    run_id = "20260522080000-editor-test"
+    run_dir = tmp_path / "audit" / run_id
+    run_dir.mkdir(parents=True)
+    target = tmp_path / "demo_app/src/demo_app/sample.py"
+    target.parent.mkdir(parents=True)
+    other = tmp_path / "demo_app/src/demo_app/other.py"
+    original = "VALUE = 1\n"
+    other.write_text("OTHER = 0\n", encoding="utf-8")
+    target.write_text(original, encoding="utf-8")
+    write_json(
+        run_dir / "change_manifest.json",
+        {
+            "run_id": run_id,
+            "provider": "local-template",
+            "model": "deterministic-v1",
+            "generated_at": "2026-05-22T00:00:00Z",
+            "plan_hash": "hash",
+            "spec_hash": "hash",
+            "allowed_paths": ["demo_app/src/demo_app/"],
+            "summary": ["Generated sample file."],
+            "files": [
+                {
+                    "path": "demo_app/src/demo_app/other.py",
+                    "purpose": "Other generated file.",
+                    "content_sha256": "other",
+                    "acceptance_criteria": [],
+                },
+                {
+                    "path": "demo_app/src/demo_app/sample.py",
+                    "purpose": "Editable generated file.",
+                    "content_sha256": "old",
+                    "acceptance_criteria": ["AC-001"],
+                }
+            ],
+        },
+    )
+    write_json(
+        run_dir / "validation_results.json",
+        {
+            "run_id": run_id,
+            "overall_status": "failed",
+            "created_at": "2026-05-22T00:00:00Z",
+            "gates": [
+                {
+                    "name": "pytest",
+                    "status": "failed",
+                    "command": [],
+                    "return_code": 1,
+                    "stdout": "demo_app\\src\\demo_app\\sample.py: sample failure",
+                    "stderr": "",
+                    "details": [],
+                    "started_at": "2026-05-22T00:00:00Z",
+                    "finished_at": "2026-05-22T00:00:00Z",
+                }
+            ],
+        },
+    )
+    client = TestClient(app, follow_redirects=False)
+
+    editor = client.get(f"/runs/{run_id}/editor?gate=pytest")
+    assert editor.status_code == 200
+    assert "sample failure" in editor.text
+    assert "<h1 class=\"h4 mb-1 text-break\">demo_app/src/demo_app/sample.py</h1>" in (
+        editor.text
+    )
+    assert "VALUE = 1" in editor.text
+
+    response = client.post(
+        f"/runs/{run_id}/editor",
+        data={
+            "file_path": "demo_app/src/demo_app/sample.py",
+            "gate": "pytest",
+            "content": "VALUE = 2\n",
+        },
+    )
+
+    assert response.status_code == 303
+    assert target.read_text(encoding="utf-8") == "VALUE = 2\n"
+    manifest = (run_dir / "change_manifest.json").read_text(encoding="utf-8")
+    assert "old" not in manifest

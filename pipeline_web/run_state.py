@@ -147,7 +147,7 @@ def get_run_state(run_id: str, audit_root: Path | None = None) -> RunState:
             or run_id
         ),
         created_at=str(metadata.get("created_at", "")),
-        spec_file=str(metadata.get("spec_file", "")),
+        spec_file=_display_path(str(metadata.get("spec_file", ""))),
         stage=stage,
         next_action=next_action,
         validation_status=str(validation_status),
@@ -204,6 +204,18 @@ def _read_optional_json(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         return {}
     return data
+
+
+def _display_path(path: str) -> str:
+    if not path:
+        return ""
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        return path
+    try:
+        return candidate.relative_to(Path.cwd()).as_posix()
+    except ValueError:
+        return candidate.name
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:

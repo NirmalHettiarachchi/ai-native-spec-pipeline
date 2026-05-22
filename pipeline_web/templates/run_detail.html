@@ -33,22 +33,22 @@
       <span>
         <i class="icon" data-lucide="git-branch"></i>
         <strong>Stage</strong>
-        {{ state.stage }}
+        <em>{{ state.stage }}</em>
       </span>
       <span>
         <i class="icon" data-lucide="target"></i>
         <strong>Next</strong>
-        {{ state.next_action }}
+        <em>{{ state.next_action }}</em>
       </span>
       <span>
         <i class="icon" data-lucide="shield-check"></i>
         <strong>Validation</strong>
-        {{ state.validation_status }}
+        <em>{{ state.validation_status }}</em>
       </span>
       <span>
         <i class="icon" data-lucide="file-code-2"></i>
         <strong>Spec</strong>
-        {{ state.spec_file }}
+        <em title="{{ state.spec_file }}">{{ state.spec_file }}</em>
       </span>
     </div>
   </div>
@@ -476,6 +476,7 @@
             <th>Purpose</th>
             <th>Acceptance Criteria</th>
             <th>Hash</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -485,9 +486,20 @@
               <td class="text-break">{{ file.purpose }}</td>
               <td class="text-break">{{ file.acceptance_criteria|join(", ") if file.acceptance_criteria else "N/A" }}</td>
               <td><code class="text-break d-inline-block">{{ file.content_sha256 }}</code></td>
+              <td>
+                <a
+                  class="btn btn-outline-primary btn-sm"
+                  href="/runs/{{ state.run_id }}/editor?file={{ file.path }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i class="icon" data-lucide="file-pen-line"></i>
+                  Edit
+                </a>
+              </td>
             </tr>
           {% else %}
-            <tr><td colspan="4" class="text-secondary">Implementation has not been generated.</td></tr>
+            <tr><td colspan="5" class="text-secondary">Implementation has not been generated.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -519,6 +531,17 @@
               </td>
               <td><code class="text-break d-inline-block">{{ " ".join(gate.command) if gate.command else "policy" }}</code></td>
               <td>
+                {% if gate.status == "failed" %}
+                  <a
+                    class="btn btn-warning btn-sm mb-2"
+                    href="/runs/{{ state.run_id }}/editor?gate={{ gate.name }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <i class="icon" data-lucide="file-pen-line"></i>
+                    Review
+                  </a>
+                {% endif %}
                 <details>
                   <summary>Output</summary>
                   <pre class="log-output mt-2">{{ gate.stdout }}{{ gate.stderr }}{{ "\n".join(gate.details) }}</pre>

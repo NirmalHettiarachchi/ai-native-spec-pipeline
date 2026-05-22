@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<section class="editor-shell" id="editor">
+  <div class="editor-header">
+    <div class="min-w-0">
+      <p class="ci-overline mb-2">
+        <span class="ci-status-light" aria-hidden="true"></span>
+        Generated file editor
+      </p>
+      <h1 class="h4 mb-1 text-break">{{ editor.selected_file.path if editor else run_id }}</h1>
+      {% if editor and editor.gate_name %}
+        <p class="text-secondary mb-0">Gate: {{ editor.gate_name }}</p>
+      {% endif %}
+    </div>
+    <a class="btn btn-outline-primary" href="/runs/{{ run_id }}#validation">
+      <i class="icon" data-lucide="x"></i>
+      Cancel
+    </a>
+  </div>
+
+  {% if error %}
+    <div class="alert alert-danger mt-3 mb-0">{{ error }}</div>
+  {% endif %}
+  {% if message %}
+    <div class="alert alert-success mt-3 mb-0">{{ message }}</div>
+  {% endif %}
+
+  {% if editor %}
+    <div class="editor-grid mt-3">
+      <aside class="editor-sidebar" aria-label="Generated files">
+        <h2 class="h6 mb-2">Files</h2>
+        <nav class="editor-file-list">
+          {% for file in editor.files %}
+            <a
+              class="{{ 'active' if file.path == editor.selected_file.path else '' }}"
+              href="/runs/{{ run_id }}/editor?file={{ file.path }}&gate={{ editor.gate_name }}"
+            >
+              <i class="icon" data-lucide="file-code-2"></i>
+              <span class="text-break">{{ file.path }}</span>
+            </a>
+          {% endfor %}
+        </nav>
+      </aside>
+
+      <form
+        class="editor-main"
+        method="post"
+        action="/runs/{{ run_id }}/editor"
+        data-loading-label="Saving file..."
+      >
+        <input type="hidden" name="file_path" value="{{ editor.selected_file.path }}">
+        <input type="hidden" name="gate" value="{{ editor.gate_name }}">
+        <label class="form-label fw-semibold" for="content">Content</label>
+        <textarea
+          class="form-control code-editor"
+          id="content"
+          name="content"
+          spellcheck="false"
+        >{{ editor.content }}</textarea>
+        <div class="editor-actions">
+          <a class="btn btn-outline-primary" href="/runs/{{ run_id }}#validation">
+            <i class="icon" data-lucide="x"></i>
+            Cancel
+          </a>
+          <button class="btn btn-primary" type="submit" data-loading-label="Saving file...">
+            <i class="icon" data-lucide="save"></i>
+            Save
+          </button>
+        </div>
+      </form>
+
+      <aside class="editor-output" aria-label="Gate output">
+        <h2 class="h6 mb-2">Gate Output</h2>
+        {% if editor.gate_output %}
+          <pre class="log-output mb-0">{{ editor.gate_output }}</pre>
+        {% else %}
+          <p class="text-secondary mb-0">No gate output selected.</p>
+        {% endif %}
+      </aside>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

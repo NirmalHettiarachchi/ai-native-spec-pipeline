@@ -386,3 +386,132 @@ def test_repair_validation_normalizes_prefix_scientific_calculator(
         pass
     else:
         raise AssertionError("division by zero should raise CalculatorError")
+
+
+def test_repair_validation_rewrites_incompatible_scientific_tests(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    audit_root = tmp_path / "audit"
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    monkeypatch.setenv("PIPELINE_AUDIT_ROOT", str(audit_root))
+
+    (repo_root / "pyproject.toml").write_text(
+        "\n".join(
+            [
+                "[tool.ruff]",
+                "line-length = 100",
+                "",
+                "[tool.ruff.lint]",
+                'select = ["E", "F", "I"]',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    spec = parse_feature_spec(Path("specs/examples/scientific_calculator.yaml"))
+    run_id, run_dir, spec_hash = initialize_run(
+        spec,
+        Path("specs/examples/scientific_calculator.yaml"),
+    )
+    files = {
+        "demo_app/src/demo_app/scientific_calculator.py": (
+            "class CalculatorError(Exception):\n"
+            "    pass\n\n"
+            "ACCEPTANCE_CRITERIA = ['AC-001']\n\n"
+            "def run_scientific_calculator(expression, *operands):\n"
+            "    return 1\n"
+        ),
+        "demo_app/src/demo_app/__init__.py": (
+            "from .scientific_calculator import CalculatorError, run_scientific_calculator\n"
+        ),
+        "demo_app/tests/test_scientific_calculator.py": (
+            "from demo_app import run_scientific_calculator\n\n"
+            "def test_list_expression():\n"
+            "    assert run_scientific_calculator(['+', 1, 1]) == 2\n"
+        ),
+        "demo_app/tests/test_scientific_calculator_acceptance.py": (
+            "from demo_app import run_scientific_calculator\n\n"
+            "def test_acceptance_criteria():\n"
+            "    assert run_scientific_calculator(['+', 1, 1]) == 2  # AC-001\n"
+        ),
+    }
+    for relative_path, content in files.items():
+        target = repo_root / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+
+    write_json(
+        run_dir / "change_manifest.json",
+        {
+            "run_id": run_id,
+            "provider": "openai-responses",
+            "model": "gpt-4o",
+            "generated_at": utc_now(),
+            "plan_hash": "hash",
+            "spec_hash": spec_hash,
+            "allowed_paths": ["demo_app/src/demo_app/", "demo_app/tests/"],
+            "summary": ["Generated incompatible scientific calculator tests."],
+            "files": [
+                {
+                    "path": relative_path,
+                    "purpose": "Generated file.",
+                    "content_sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                    "acceptance_criteria": ["AC-001"],
+                }
+                for relative_path, content in files.items()
+            ],
+        },
+    )
+    write_json(
+        run_dir / "validation_results.json",
+        {
+            "run_id": run_id,
+            "overall_status": "failed",
+            "created_at": utc_now(),
+            "gates": [
+                {
+                    "name": "pytest",
+                    "status": "failed",
+                    "command": [],
+                    "return_code": 1,
+                    "stdout": "AttributeError: 'list' object has no attribute 'split'",
+                    "stderr": "",
+                    "details": [],
+                    "started_at": utc_now(),
+                    "finished_at": utc_now(),
+                },
+                {
+                    "name": "policy",
+                    "status": "failed",
+                    "command": [],
+                    "return_code": None,
+                    "stdout": "",
+                    "stderr": "",
+                    "details": ["missing acceptance coverage for: AC-003, AC-004"],
+                    "started_at": utc_now(),
+                    "finished_at": utc_now(),
+                },
+            ],
+        },
+    )
+
+    results = repair_validation(run_id, repo_root=repo_root)
+
+    unit_tests = (repo_root / "demo_app/tests/test_scientific_calculator.py").read_text(
+        encoding="utf-8"
+    )
+    acceptance_tests = (
+        repo_root / "demo_app/tests/test_scientific_calculator_acceptance.py"
+    ).read_text(encoding="utf-8")
+    manifest = read_json(run_dir / "change_manifest.json")
+
+    assert results[-1].status == "passed"
+    assert "['+'" not in unit_tests
+    assert "test_ac_003_logarithmic_operations" in acceptance_tests
+    assert "AC-004" in acceptance_tests
+    for file_entry in manifest["files"]:
+        content = (repo_root / file_entry["path"]).read_text(encoding="utf-8").encode("utf-8")
+        assert file_entry["content_sha256"] == hashlib.sha256(content).hexdigest()
