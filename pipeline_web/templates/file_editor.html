@@ -48,16 +48,75 @@
         method="post"
         action="/runs/{{ run_id }}/editor"
         data-loading-label="Saving file..."
+        data-editor-form
       >
         <input type="hidden" name="file_path" value="{{ editor.selected_file.path }}">
         <input type="hidden" name="gate" value="{{ editor.gate_name }}">
+        <div class="editor-toolbar" aria-label="Editor tools">
+          <div class="editor-tool-group">
+            <button class="btn btn-outline-primary btn-sm" type="button" data-editor-command="undo">
+              <i class="icon" data-lucide="undo-2"></i>
+              Undo
+            </button>
+            <button class="btn btn-outline-primary btn-sm" type="button" data-editor-command="redo">
+              <i class="icon" data-lucide="redo-2"></i>
+              Redo
+            </button>
+            <button class="btn btn-outline-primary btn-sm" type="button" data-editor-command="revert">
+              <i class="icon" data-lucide="rotate-ccw"></i>
+              Revert
+            </button>
+          </div>
+          <div class="editor-tool-group">
+            <button class="btn btn-outline-primary btn-sm" type="button" data-editor-command="wrap" aria-pressed="false">
+              <i class="icon" data-lucide="wrap-text"></i>
+              Wrap
+            </button>
+            <button
+              class="btn btn-outline-primary btn-sm"
+              type="button"
+              data-editor-command="toggle-diff"
+              aria-expanded="false"
+            >
+              <i class="icon" data-lucide="git-compare-arrows"></i>
+              <span class="editor-command-label">Show diff</span>
+            </button>
+          </div>
+        </div>
+        <div class="editor-statusbar" aria-live="polite">
+          <span data-editor-position>Line 1, Col 1</span>
+          <span data-editor-dirty>Saved</span>
+          <span>Ctrl+S saves</span>
+        </div>
         <label class="form-label fw-semibold" for="content">Content</label>
+        <textarea class="d-none" data-editor-original>{{ editor.original_content }}</textarea>
         <textarea
           class="form-control code-editor"
           id="content"
           name="content"
           spellcheck="false"
+          data-editor
         >{{ editor.content }}</textarea>
+        <section
+          class="editor-diff mt-3"
+          aria-label="Changes from generated version"
+          data-editor-diff-panel
+          hidden
+        >
+          <div class="editor-diff-header">
+            <h2 class="h6 mb-0">Diff</h2>
+            <span data-editor-diff-summary>No changes</span>
+          </div>
+          <pre class="editor-diff-output mb-0" data-editor-diff>No changes.</pre>
+        </section>
+        <details class="editor-output mt-3" aria-label="Gate output">
+          <summary class="fw-semibold">Gate Output</summary>
+          {% if editor.gate_output %}
+            <pre class="log-output mt-2 mb-0">{{ editor.gate_output }}</pre>
+          {% else %}
+            <p class="text-secondary mt-2 mb-0">No gate output selected.</p>
+          {% endif %}
+        </details>
         <div class="editor-actions">
           <a class="btn btn-outline-primary" href="/runs/{{ run_id }}#validation">
             <i class="icon" data-lucide="x"></i>
@@ -69,15 +128,6 @@
           </button>
         </div>
       </form>
-
-      <aside class="editor-output" aria-label="Gate output">
-        <h2 class="h6 mb-2">Gate Output</h2>
-        {% if editor.gate_output %}
-          <pre class="log-output mb-0">{{ editor.gate_output }}</pre>
-        {% else %}
-          <p class="text-secondary mb-0">No gate output selected.</p>
-        {% endif %}
-      </aside>
     </div>
   {% endif %}
 </section>

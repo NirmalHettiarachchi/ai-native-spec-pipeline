@@ -732,6 +732,7 @@ div[id] {
 }
 
 .editor-shell {
+  min-height: calc(100vh - 8rem);
   padding: 1rem;
   border: 1px solid var(--app-border);
   border-radius: 0.25rem;
@@ -750,9 +751,9 @@ div[id] {
 
 .editor-grid {
   display: grid;
-  grid-template-columns: minmax(13rem, 18rem) minmax(0, 1fr) minmax(18rem, 28rem);
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .editor-sidebar,
@@ -762,6 +763,11 @@ div[id] {
   border: 1px solid var(--app-border);
   border-radius: 0.25rem;
   background: #fbfbfd;
+}
+
+.editor-sidebar {
+  max-height: calc(100vh - 10rem);
+  overflow: auto;
 }
 
 .editor-file-list {
@@ -788,13 +794,17 @@ div[id] {
 }
 
 .editor-main {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
 .code-editor {
-  min-height: 34rem;
+  flex: 1 1 auto;
+  min-height: min(62vh, 44rem);
+  width: 100%;
   font-family: var(--bs-font-monospace);
-  font-size: 0.86rem;
+  font-size: 0.9rem;
   line-height: 1.45;
   resize: vertical;
   white-space: pre;
@@ -803,6 +813,104 @@ div[id] {
 .editor-actions {
   justify-content: end;
   margin-top: 0.75rem;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding: 0.55rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--bs-border-radius);
+  background: #fbfbfd;
+}
+
+.editor-tool-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.editor-statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.code-editor.is-wrapped {
+  white-space: pre-wrap;
+}
+
+.editor-diff {
+  border: 1px solid var(--app-border);
+  border-radius: var(--bs-border-radius);
+  overflow: hidden;
+  background: #fff;
+}
+
+.editor-diff[hidden] {
+  display: none;
+}
+
+.editor-diff-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--app-border);
+  background: #fbfbfd;
+}
+
+.editor-diff-header span {
+  color: var(--app-muted);
+  font-family: var(--bs-font-monospace);
+  font-size: 0.78rem;
+}
+
+.editor-diff-output {
+  max-height: 24rem;
+  padding: 0;
+  overflow: auto;
+  background: #fff;
+  color: var(--app-text);
+  font-family: var(--bs-font-monospace);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  white-space: pre;
+}
+
+.editor-diff-output span {
+  display: block;
+  min-height: 1.2rem;
+  padding: 0 0.75rem;
+}
+
+.editor-diff-output .diff-add {
+  background: #ecfdf0;
+  color: #176f2c;
+}
+
+.editor-diff-output .diff-remove {
+  background: #fff0f0;
+  color: #b42318;
+}
+
+.editor-diff-output .diff-info {
+  background: #fff8e6;
+  color: #8a6100;
+}
+
+.editor-diff-output .diff-context {
+  color: #57606a;
 }
 
 .loading-overlay {

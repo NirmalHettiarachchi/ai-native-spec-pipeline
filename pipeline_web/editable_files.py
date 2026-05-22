@@ -23,6 +23,7 @@ class EditorContext:
     selected_file: EditableFile
     files: tuple[EditableFile, ...]
     content: str
+    original_content: str
     gate_name: str
     gate_output: str
 
@@ -47,12 +48,14 @@ def read_editor_context(
     target = _safe_repo_path(selected.path, repo_root)
     if not target.exists():
         raise PipelineError(f"generated file does not exist: {selected.path}")
+    content = target.read_text(encoding="utf-8")
 
     return EditorContext(
         run_id=run_id,
         selected_file=selected,
         files=files,
-        content=target.read_text(encoding="utf-8"),
+        content=content,
+        original_content=_original_content(run_dir, selected.path, content),
         gate_name=gate_name,
         gate_output=gate_output,
     )
@@ -148,6 +151,20 @@ def _gate_output(run_dir: Path, gate_name: str) -> str:
             if part
         )
     return ""
+
+
+def _original_content(run_dir: Path, file_path: str, current_content: str) -> str:
+    snapshot_path = _snapshot_path(run_dir, file_path)
+    if snapshot_path.exists():
+        return snapshot_path.read_text(encoding="utf-8")
+    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+    snapshot_path.write_text(current_content, encoding="utf-8")
+    return current_content
+
+
+def _snapshot_path(run_dir: Path, file_path: str) -> Path:
+    digest = hashlib.sha256(file_path.encode("utf-8")).hexdigest()
+    return run_dir / "editor_snapshots" / f"{digest}.txt"
 
 
 def _is_relative_to(path: Path, parent: Path) -> bool:

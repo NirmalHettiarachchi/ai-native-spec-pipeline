@@ -421,6 +421,16 @@ def test_web_editor_edits_manifest_file_and_refreshes_hash(
         editor.text
     )
     assert "VALUE = 1" in editor.text
+    assert "data-editor-form" in editor.text
+    assert 'data-editor-command="undo"' in editor.text
+    assert 'data-editor-command="redo"' in editor.text
+    assert 'data-editor-command="revert"' in editor.text
+    assert 'data-editor-command="toggle-diff"' in editor.text
+    assert 'data-editor-diff' in editor.text
+    assert "data-editor-diff-panel" in editor.text
+    assert "data-editor-find" not in editor.text
+    assert "data-editor-line" not in editor.text
+    assert "Changes from generated version" in editor.text
 
     response = client.post(
         f"/runs/{run_id}/editor",
@@ -435,3 +445,7 @@ def test_web_editor_edits_manifest_file_and_refreshes_hash(
     assert target.read_text(encoding="utf-8") == "VALUE = 2\n"
     manifest = (run_dir / "change_manifest.json").read_text(encoding="utf-8")
     assert "old" not in manifest
+    saved_editor = client.get(f"/runs/{run_id}/editor?file=demo_app/src/demo_app/sample.py")
+    assert saved_editor.status_code == 200
+    assert "VALUE = 2" in saved_editor.text
+    assert "VALUE = 1" in saved_editor.text
